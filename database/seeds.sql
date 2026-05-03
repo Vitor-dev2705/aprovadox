@@ -6,7 +6,7 @@ INSERT INTO users (name, email, password_hash, xp, level, streak, plan)
 VALUES (
   'Demo AprovadoX',
   'demo@aprovadox.com',
-  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK3udaURm',
+  '$2a$12$on1mi/CSfun9izM0iNKJYuJVUlr9kRM7zZoJNHk1bFw.A2iWbUZzK',
   250, 3, 7, 'premium'
 ) ON CONFLICT DO NOTHING;
 
