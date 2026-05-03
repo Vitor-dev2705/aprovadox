@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FiMail, FiLock, FiArrowRight, FiZap } from 'react-icons/fi'
+import { FiMail, FiLock, FiArrowRight, FiZap, FiClock, FiCalendar, FiAward, FiBarChart2 } from 'react-icons/fi'
 import { useAuthStore } from '../store/authStore'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 
-const stats = [
-  { value: '50K+', label: 'Aprovados' },
-  { value: '2M+', label: 'Horas estudadas' },
-  { value: '98%', label: 'Satisfação' },
+const highlights = [
+  { icon: FiClock,     label: 'Cronômetro com Pomodoro' },
+  { icon: FiCalendar,  label: 'Revisão espaçada automática' },
+  { icon: FiBarChart2, label: 'Gráficos de evolução' },
+  { icon: FiAward,     label: 'Gamificação e medalhas' },
 ]
 
 export default function Login() {
@@ -85,13 +86,6 @@ export default function Login() {
               Criar conta grátis
             </Link>
           </p>
-
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 rounded-xl bg-brand-500/10 border border-brand-500/20">
-            <p className="text-xs text-brand-300 font-medium mb-1">🎯 Conta demo</p>
-            <p className="text-xs text-slate-400">Email: demo@aprovadox.com</p>
-            <p className="text-xs text-slate-400">Senha: demo123</p>
-          </div>
         </motion.div>
       </div>
 
@@ -118,22 +112,17 @@ export default function Login() {
           </motion.div>
 
           <h2 className="text-3xl font-black text-white mb-4">Sua aprovação <span className="gradient-text">começa aqui</span></h2>
-          <p className="text-slate-400 mb-10">A plataforma mais completa para quem estuda para concursos públicos.</p>
+          <p className="text-slate-400 mb-10">A plataforma completa para quem estuda para concursos públicos.</p>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            {stats.map(({ value, label }) => (
-              <div key={label} className="bg-dark-700/60 rounded-xl p-4 border border-white/5">
-                <p className="text-2xl font-black gradient-text">{value}</p>
-                <p className="text-xs text-slate-400 mt-1">{label}</p>
+          {/* Highlights */}
+          <div className="space-y-3 text-left">
+            {highlights.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3 bg-dark-700/60 rounded-xl p-3 border border-white/5">
+                <div className="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+                  <Icon size={15} className="text-brand-400" />
+                </div>
+                <span className="text-sm text-slate-300">{label}</span>
               </div>
-            ))}
-          </div>
-
-          {/* Feature pills */}
-          <div className="flex flex-wrap gap-2 justify-center mt-8">
-            {['Cronômetro', 'Revisão Espaçada', 'Gamificação', 'Pomodoro', 'Gráficos', 'Questões'].map(f => (
-              <span key={f} className="px-3 py-1.5 rounded-full bg-dark-600 border border-white/5 text-xs text-slate-300">{f}</span>
             ))}
           </div>
         </div>

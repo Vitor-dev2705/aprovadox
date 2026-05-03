@@ -52,8 +52,8 @@ export default function Register() {
         <div className="absolute top-20 left-20 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl" />
 
         <div className="relative z-10 max-w-sm">
-          <h2 className="text-4xl font-black text-white mb-4">Junte-se a <span className="gradient-text">50 mil aprovados</span></h2>
-          <p className="text-slate-400 mb-10">Crie sua conta grátis e comece a estudar com estratégia agora mesmo.</p>
+          <h2 className="text-4xl font-black text-white mb-4">Comece a estudar <span className="gradient-text">com método</span></h2>
+          <p className="text-slate-400 mb-10">Crie sua conta grátis e organize seus estudos em poucos minutos.</p>
 
           <div className="space-y-3">
             {features.map((f) => (
@@ -67,8 +67,10 @@ export default function Register() {
           </div>
 
           <div className="mt-10 p-5 rounded-2xl gradient-border">
-            <p className="text-sm text-slate-300 italic">"Com o AprovadoX organizei meus estudos e fui aprovado em 8 meses. A revisão espaçada foi o diferencial!"</p>
-            <p className="text-xs text-slate-500 mt-3">— João Silva, aprovado TJSP 2024</p>
+            <p className="text-sm text-slate-300">
+              <span className="block font-bold text-white mb-1">100% grátis para começar</span>
+              Cadastro rápido, sem cartão de crédito. Faça upgrade para Premium quando quiser desbloquear todos os recursos.
+            </p>
           </div>
         </div>
       </motion.div>
