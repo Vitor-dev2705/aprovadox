@@ -26,7 +26,8 @@ exports.register = async (req, res) => {
 
     res.status(201).json({ user: { ...user, xp: 50 }, token });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar conta' });
+    console.error('REGISTER ERROR:', err);
+    res.status(500).json({ error: 'Erro ao criar conta', detail: err.message });
   }
 };
 
@@ -44,7 +45,8 @@ exports.login = async (req, res) => {
     const { password_hash, ...userData } = user;
     res.json({ user: userData, token });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao fazer login' });
+    console.error('LOGIN ERROR:', err);
+    res.status(500).json({ error: 'Erro ao fazer login', detail: err.message });
   }
 };
 

@@ -37,6 +37,30 @@ app.use(cors({
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Healthcheck — diagnóstico rápido sem auth
+app.get('/api/health', async (req, res) => {
+  const pool = require('./config/database');
+  const status = {
+    api: 'ok',
+    env: {
+      DATABASE_URL: !!process.env.DATABASE_URL,
+      JWT_SECRET: !!process.env.JWT_SECRET,
+      NODE_ENV: process.env.NODE_ENV || 'undefined',
+    },
+    db: 'unknown',
+  };
+  try {
+    const r = await pool.query('SELECT NOW() as now, COUNT(*)::int as users FROM users');
+    status.db = 'ok';
+    status.db_now = r.rows[0].now;
+    status.users_count = r.rows[0].users;
+  } catch (err) {
+    status.db = 'error';
+    status.db_error = err.message;
+  }
+  res.json(status);
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/concursos', concursosRoutes);
 app.use('/api/materias', materiasRoutes);
