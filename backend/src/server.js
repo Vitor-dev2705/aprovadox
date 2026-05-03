@@ -18,7 +18,22 @@ const planejamentoRoutes = require('./routes/planejamento.routes');
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // permite mesma origem (Vercel monorepo), localhost e a FRONTEND_URL definida
+    if (!origin) return callback(null, true);
+    const allowed = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ].filter(Boolean);
+    if (allowed.includes(origin) || /\.vercel\.app$/.test(new URL(origin).hostname)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // permissivo para evitar bloqueio em prod
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
