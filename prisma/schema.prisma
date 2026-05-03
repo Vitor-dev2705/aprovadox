@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
+  avatarUrl      String?  @map("avatar_url")
+  xp             Int      @default(0)
+  level          Int      @default(1)
+  streak         Int      @default(0)
+  lastStudyDate  DateTime? @map("last_study_date") @db.Date
+  theme          String   @default("dark")
+  plan           String   @default("free")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  concursos        Concurso[]
+  materias         Materia[]
+  sessoes          SessaoEstudo[]
+  revisoes         Revisao[]
+  metas            Meta[]
+  questoesErradas  QuestaoErrada[]
+  gamificacaoLog   GamificacaoLog[]
+  planejamentos    PlanejamentoSemanal[]
+  medalhas         Medalha[]
+
+  @@map("users")
+}
+
+model Concurso {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  nome      String
+  banca     String?
+  cargo     String?
+  dataProva DateTime? @map("data_prova") @db.Date
+  editalUrl String?   @map("edital_url")
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materias Materia[]
+
+  @@map("concursos")
+}
+
+model Materia {
+  id               Int     @id @default(autoincrement())
+  userId           Int     @map("user_id")
+  concursoId       Int?    @map("concurso_id")
+  nome             String
+  cor              String  @default("#6366f1")
+  metaSemanalHoras Decimal @default(5) @map("meta_semanal_horas") @db.Decimal(5, 2)
+  peso             Int     @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concurso     Concurso?             @relation(fields: [concursoId], references: [id], onDelete: SetNull)
+  assuntos     Assunto[]
+  sessoes      SessaoEstudo[]
+  revisoes     Revisao[]
+  questoes     QuestaoErrada[]
+  planejamentos PlanejamentoSemanal[]
+
+  @@map("materias")
+}
+
+model Assunto {
+  id        Int     @id @default(autoincrement())
+  materiaId Int     @map("materia_id")
+  nome      String
+  concluido Boolean @default(false)
+  ordem     Int     @default(0)
+
+  materia  Materia        @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+  sessoes  SessaoEstudo[]
+  revisoes Revisao[]
+
+  @@map("assuntos")
+}
+
+model SessaoEstudo {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  materiaId       Int?     @map("materia_id")
+  assuntoId       Int?     @map("assunto_id")
+  tecnica         String?
+  duracaoMinutos  Int      @map("duracao_minutos")
+  dataInicio      DateTime @map("data_inicio")
+  dataFim         DateTime? @map("data_fim")
+  notas           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materia Materia? @relation(fields: [materiaId], references: [id], onDelete: SetNull)
+  assunto Assunto? @relation(fields: [assuntoId], references: [id], onDelete: SetNull)
+
+  @@map("sessoes_estudo")
+}
+
+model Revisao {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  materiaId   Int?     @map("materia_id")
+  assuntoId   Int?     @map("assunto_id")
+  tipo        String
+  dataRevisao DateTime @map("data_revisao") @db.Date
+  concluida   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materia Materia? @relation(fields: [materiaId], references: [id], onDelete: SetNull)
+  assunto Assunto? @relation(fields: [assuntoId], references: [id], onDelete: SetNull)
+
+  @@map("revisoes")
+}
+
+model Meta {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  tipo          String
+  descricao     String?
+  valorAlvo     Decimal  @map("valor_alvo") @db.Decimal(10, 2)
+  valorAtual    Decimal  @default(0) @map("valor_atual") @db.Decimal(10, 2)
+  periodoInicio DateTime? @map("periodo_inicio") @db.Date
+  periodoFim    DateTime? @map("periodo_fim") @db.Date
+  concluida     Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("metas")
+}
+
+model QuestaoErrada {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @map("user_id")
+  materiaId          Int?     @map("materia_id")
+  questao            String
+  alternativas       Json?
+  erroCometido       String?  @map("erro_cometido")
+  explicacaoCorreta  String?  @map("explicacao_correta")
+  revisada           Boolean  @default(false)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materia Materia? @relation(fields: [materiaId], references: [id], onDelete: SetNull)
+
+  @@map("questoes_erradas")
+}
+
+model GamificacaoLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tipo      String
+  descricao String?
+  xpGanho   Int      @default(0) @map("xp_ganho")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("gamificacao_log")
+}
+
+model PlanejamentoSemanal {
+  id             Int     @id @default(autoincrement())
+  userId         Int     @map("user_id")
+  diaSemana      Int     @map("dia_semana")
+  materiaId      Int     @map("materia_id")
+  horas          Decimal @db.Decimal(4, 2)
+  horarioInicio  String? @map("horario_inicio")
+  horarioFim     String? @map("horario_fim")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materia Materia @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+
+  @@map("planejamento_semanal")
+}
+
+model Medalha {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  tipo           String
+  nome           String
+  descricao      String?
+  icone          String?
+  dataConquista  DateTime @default(now()) @map("data_conquista")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("medalhas")
+}
