@@ -6,7 +6,12 @@ exports.getByMateria = async (req, res) => {
   try {
     const { materiaId } = req.params;
     const result = await pool.query(
-      `SELECT c.* FROM conteudos c
+      `SELECT c.*,
+        (SELECT json_agg(json_build_object(
+            'id', a.id, 'nome', a.nome, 'concluido', a.concluido, 'ordem', a.ordem
+          ) ORDER BY a.ordem)
+         FROM assuntos a WHERE a.conteudo_id = c.id) as assuntos
+       FROM conteudos c
        INNER JOIN materias m ON c.materia_id = m.id
        WHERE c.materia_id = $1 AND m.user_id = $2
        ORDER BY c.ordem ASC, c.created_at DESC`,
@@ -21,13 +26,12 @@ exports.getByMateria = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { materia_id, titulo, tipo, url, descricao } = req.body;
+    const { materia_id, titulo, tipo, url, descricao, assuntos } = req.body;
     if (!materia_id || !titulo) {
       return res.status(400).json({ error: 'Matéria e título são obrigatórios' });
     }
     const tipoFinal = TIPOS_VALIDOS.includes(tipo) ? tipo : 'anotacao';
 
-    // Garantir que a matéria pertence ao usuário
     const owner = await pool.query(
       'SELECT id FROM materias WHERE id = $1 AND user_id = $2',
       [materia_id, req.userId]
@@ -42,7 +46,21 @@ exports.create = async (req, res) => {
        RETURNING *`,
       [req.userId, materia_id, titulo, tipoFinal, url || null, descricao || null]
     );
-    res.status(201).json(result.rows[0]);
+    const conteudo = result.rows[0];
+
+    // Inserir assuntos vinculados a este conteúdo (se enviados)
+    if (Array.isArray(assuntos) && assuntos.length) {
+      for (let i = 0; i < assuntos.length; i++) {
+        const nome = String(assuntos[i] || '').trim();
+        if (!nome) continue;
+        await pool.query(
+          'INSERT INTO assuntos (materia_id, conteudo_id, nome, ordem) VALUES ($1, $2, $3, $4)',
+          [materia_id, conteudo.id, nome, i]
+        );
+      }
+    }
+
+    res.status(201).json(conteudo);
   } catch (err) {
     console.error('CONTEUDOS CREATE ERROR:', err);
     res.status(500).json({ error: 'Erro ao criar conteúdo', detail: err.message });

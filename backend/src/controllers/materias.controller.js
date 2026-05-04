@@ -24,7 +24,16 @@ exports.getById = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT m.*,
-        (SELECT json_agg(json_build_object('id', a.id, 'nome', a.nome, 'concluido', a.concluido, 'ordem', a.ordem) ORDER BY a.ordem) FROM assuntos a WHERE a.materia_id = m.id) as assuntos
+        (SELECT json_agg(json_build_object(
+            'id', a.id, 'nome', a.nome, 'concluido', a.concluido,
+            'ordem', a.ordem, 'conteudo_id', a.conteudo_id
+          ) ORDER BY a.ordem)
+         FROM assuntos a WHERE a.materia_id = m.id) as assuntos,
+        (SELECT json_agg(json_build_object(
+            'id', c.id, 'titulo', c.titulo, 'tipo', c.tipo,
+            'url', c.url, 'descricao', c.descricao, 'ordem', c.ordem
+          ) ORDER BY c.ordem)
+         FROM conteudos c WHERE c.materia_id = m.id) as conteudos
       FROM materias m WHERE m.id = $1 AND m.user_id = $2`,
       [req.params.id, req.userId]
     );
@@ -81,13 +90,13 @@ exports.delete = async (req, res) => {
 
 exports.addAssunto = async (req, res) => {
   try {
-    const { nome } = req.body;
+    const { nome, conteudo_id } = req.body;
     const materia = await pool.query('SELECT id FROM materias WHERE id = $1 AND user_id = $2', [req.params.id, req.userId]);
     if (!materia.rows.length) return res.status(404).json({ error: 'Matéria não encontrada' });
 
     const result = await pool.query(
-      'INSERT INTO assuntos (materia_id, nome, ordem) VALUES ($1, $2, (SELECT COALESCE(MAX(ordem),0)+1 FROM assuntos WHERE materia_id=$1)) RETURNING *',
-      [req.params.id, nome]
+      'INSERT INTO assuntos (materia_id, conteudo_id, nome, ordem) VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordem),0)+1 FROM assuntos WHERE materia_id=$1)) RETURNING *',
+      [req.params.id, conteudo_id || null, nome]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
