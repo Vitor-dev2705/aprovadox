@@ -14,6 +14,7 @@ const questoesRoutes = require('./routes/questoes.routes');
 const gamificacaoRoutes = require('./routes/gamificacao.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const planejamentoRoutes = require('./routes/planejamento.routes');
+const notificacoesRoutes = require('./routes/notificacoes.routes');
 
 const app = express();
 
@@ -34,7 +35,7 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Healthcheck — diagnóstico rápido sem auth
@@ -71,6 +72,7 @@ app.use('/api/questoes', questoesRoutes);
 app.use('/api/gamificacao', gamificacaoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/planejamento', planejamentoRoutes);
+app.use('/api/notificacoes', notificacoesRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

@@ -41,17 +41,57 @@ export default function Perfil() {
     } catch (err) { toast.error(err.response?.data?.error || 'Erro ao alterar senha') } finally { setSavingPass(false) }
   }
 
+  // Redimensiona e comprime imagem no navegador antes de enviar
+  const compressImage = (file, maxSize = 400, quality = 0.85) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let { width, height } = img
+          if (width > height) {
+            if (width > maxSize) { height = (height * maxSize) / width; width = maxSize }
+          } else {
+            if (height > maxSize) { width = (width * maxSize) / height; height = maxSize }
+          }
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        }
+        img.onerror = reject
+        img.src = e.target.result
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const formData = new FormData()
-    formData.append('avatar', file)
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione uma imagem')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande (máx 5MB)')
+      return
+    }
     setUploadingAvatar(true)
     try {
-      const r = await api.post('/auth/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-      updateUser({ avatarUrl: r.data.avatar_url })
-      toast.success('Foto atualizada!')
-    } catch { toast.error('Erro ao enviar foto') } finally { setUploadingAvatar(false) }
+      const compressed = await compressImage(file)
+      const r = await api.post('/auth/avatar', { avatar: compressed })
+      updateUser({ avatar_url: r.data.avatar_url, avatarUrl: r.data.avatar_url })
+      toast.success('Foto atualizada! 📸')
+    } catch (err) {
+      console.error(err)
+      toast.error(err.response?.data?.error || 'Erro ao enviar foto')
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   const handleLogout = () => { logout(); navigate('/') }
@@ -68,8 +108,8 @@ export default function Perfil() {
         <div className="flex items-center gap-6">
           <div className="relative group">
             <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-brand-500/30">
-              {user?.avatarUrl
-                ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+              {(user?.avatar_url || user?.avatarUrl)
+                ? <img src={user.avatar_url || user.avatarUrl} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
                     <span className="text-3xl font-black text-white">{user?.name?.[0]?.toUpperCase()}</span>
                   </div>

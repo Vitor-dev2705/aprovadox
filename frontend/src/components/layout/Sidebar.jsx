@@ -115,8 +115,8 @@ export default function Sidebar({ collapsed, onToggle }) {
             isActive ? 'bg-brand-500/20 text-brand-400' : 'text-slate-400 hover:text-white hover:bg-white/5'
           )}
         >
-          {user?.avatarUrl
-            ? <img src={user.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+          {(user?.avatar_url || user?.avatarUrl)
+            ? <img src={user.avatar_url || user.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
             : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-white">{user?.name?.[0]?.toUpperCase()}</span>
               </div>

@@ -214,11 +214,21 @@ exports.changePassword = async (req, res) => {
 
 exports.uploadAvatar = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-    const avatar_url = `/uploads/${req.file.filename}`;
-    await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatar_url, req.userId]);
-    res.json({ avatar_url });
+    // Aceita base64 enviado como JSON: { avatar: 'data:image/png;base64,...' }
+    const { avatar } = req.body;
+    if (!avatar || typeof avatar !== 'string' || !avatar.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Imagem inválida. Envie uma foto em base64.' });
+    }
+
+    // Limite: ~500KB de base64 (~370KB de imagem real)
+    if (avatar.length > 700000) {
+      return res.status(413).json({ error: 'Imagem muito grande. Reduza o tamanho/qualidade.' });
+    }
+
+    await pool.query('UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2', [avatar, req.userId]);
+    res.json({ avatar_url: avatar });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao enviar avatar' });
+    console.error('AVATAR ERROR:', err);
+    res.status(500).json({ error: 'Erro ao enviar avatar', detail: err.message });
   }
 };
