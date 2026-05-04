@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FiBell, FiSearch, FiZap, FiCheck, FiCheckCircle } from 'react-icons/fi'
+import { FiBell, FiSearch, FiZap, FiCheck, FiCheckCircle, FiClock, FiPause } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
+import { useStudyStore } from '../../store/studyStore'
 import { notificacaoService } from '../../services/notificacao.service'
 
 // =====================================================
@@ -35,6 +36,21 @@ export default function Header({ sidebarCollapsed }) {
   const [seenIds, setSeenIds] = useState(() => loadSeenIds(user?.id))
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
+
+  // Indicador global de timer rodando
+  const timerRunning = useStudyStore(s => s.isRunning)
+  const timerPaused  = useStudyStore(s => s.isPaused)
+  const timerSeconds = useStudyStore(s => s.seconds)
+  const timerMateria = useStudyStore(s => s.materiaName)
+  const timerCor     = useStudyStore(s => s.materiaCor)
+
+  const formatTimerHHMM = (s) => {
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  }
 
   const fetchNotifications = async () => {
     setLoadingNotif(true)
@@ -143,6 +159,43 @@ export default function Header({ sidebarCollapsed }) {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* TIMER FLUTUANTE — clicável para voltar ao Cronômetro */}
+        <AnimatePresence>
+          {(timerRunning || timerPaused) && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              onClick={() => navigate('/cronometro')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all hover:scale-105 ${
+                timerRunning
+                  ? 'bg-accent-500/20 border-accent-500/40'
+                  : 'bg-yellow-500/20 border-yellow-500/40'
+              }`}
+              title={timerMateria ? `Estudando ${timerMateria}` : 'Voltar ao cronômetro'}
+              style={{
+                borderColor: timerRunning && timerCor ? `${timerCor}50` : undefined,
+                background: timerRunning && timerCor ? `${timerCor}20` : undefined
+              }}
+            >
+              {timerRunning ? (
+                <motion.div
+                  animate={{ scale: [1, 1.3, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className="w-2 h-2 rounded-full bg-accent-400"
+                  style={{ background: timerCor || '#10b981' }}
+                />
+              ) : (
+                <FiPause size={11} className="text-yellow-400" />
+              )}
+              <span className="text-xs font-bold tabular-nums hidden sm:inline" style={{ color: timerRunning && timerCor ? timerCor : timerRunning ? '#34d399' : '#fbbf24' }}>
+                {formatTimerHHMM(timerSeconds)}
+              </span>
+              <FiClock size={11} className="sm:hidden" style={{ color: timerRunning ? '#34d399' : '#fbbf24' }} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         {/* Streak badge */}
         {(user?.streak || 0) > 0 && (
           <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-500/30 px-3 py-1.5 rounded-full">
