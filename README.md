@@ -299,5 +299,3 @@ npx prisma generate --schema=prisma/schema.prisma
 MIT License — use livremente, mas dê os créditos! 🙏
 
 ---
-
-**AprovadoX** © 2024 — *Sua aprovação começa aqui* 🚀
