@@ -92,6 +92,22 @@ CREATE TABLE IF NOT EXISTS metas (
   created_at     TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS conteudos (
+  id           SERIAL PRIMARY KEY,
+  materia_id   INTEGER REFERENCES materias(id) ON DELETE CASCADE,
+  user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  titulo       VARCHAR(255) NOT NULL,
+  tipo         VARCHAR(20) DEFAULT 'anotacao',
+  url          TEXT,
+  descricao    TEXT,
+  visualizado  BOOLEAN DEFAULT false,
+  ordem        INTEGER DEFAULT 0,
+  created_at   TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_conteudos_materia ON conteudos(materia_id);
+CREATE INDEX IF NOT EXISTS idx_conteudos_user    ON conteudos(user_id);
+
 CREATE TABLE IF NOT EXISTS questoes_erradas (
   id                 SERIAL PRIMARY KEY,
   user_id            INTEGER REFERENCES users(id) ON DELETE CASCADE,

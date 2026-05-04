@@ -15,6 +15,7 @@ const gamificacaoRoutes = require('./routes/gamificacao.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const planejamentoRoutes = require('./routes/planejamento.routes');
 const notificacoesRoutes = require('./routes/notificacoes.routes');
+const conteudosRoutes = require('./routes/conteudos.routes');
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use('/api/gamificacao', gamificacaoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/planejamento', planejamentoRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
+app.use('/api/conteudos', conteudosRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

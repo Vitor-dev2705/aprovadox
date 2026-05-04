@@ -71,8 +71,26 @@ model Materia {
   revisoes     Revisao[]
   questoes     QuestaoErrada[]
   planejamentos PlanejamentoSemanal[]
+  conteudos    Conteudo[]
 
   @@map("materias")
+}
+
+model Conteudo {
+  id          Int      @id @default(autoincrement())
+  materiaId   Int      @map("materia_id")
+  userId      Int      @map("user_id")
+  titulo      String
+  tipo        String   @default("anotacao")
+  url         String?
+  descricao   String?
+  visualizado Boolean  @default(false)
+  ordem       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  materia Materia @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+
+  @@map("conteudos")
 }
 
 model Assunto {
