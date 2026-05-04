@@ -14,7 +14,7 @@ export default function Layout() {
     setMobileOpen(false)
   }, [location])
 
-  const sidebarW = collapsed ? 72 : 260
+  const sidebarW = collapsed ? 76 : 260
 
   return (
     <div className="min-h-screen bg-dark-900 flex">
