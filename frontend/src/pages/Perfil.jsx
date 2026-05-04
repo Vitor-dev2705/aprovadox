@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { FiUser, FiMail, FiLock, FiCamera, FiSave, FiMoon, FiSun, FiLogOut } from 'react-icons/fi'
+import { FiUser, FiMail, FiLock, FiCamera, FiSave, FiMoon, FiSun, FiLogOut, FiCheck, FiX } from 'react-icons/fi'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { useNavigate } from 'react-router-dom'
@@ -10,6 +10,26 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Badge from '../components/ui/Badge'
 import toast from 'react-hot-toast'
+
+// Verifica força da senha em tempo real (mesma lógica do Register)
+function checkPassword(pw) {
+  return {
+    length: pw.length >= 8,
+    upper:  /[A-Z]/.test(pw),
+    lower:  /[a-z]/.test(pw),
+    number: /[0-9]/.test(pw),
+    special:/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(pw),
+  }
+}
+
+function PasswordRequirement({ ok, label }) {
+  return (
+    <div className={`flex items-center gap-2 text-xs transition-colors ${ok ? 'text-accent-400' : 'text-slate-500'}`}>
+      {ok ? <FiCheck size={12} className="flex-shrink-0" /> : <FiX size={12} className="flex-shrink-0" />}
+      <span>{label}</span>
+    </div>
+  )
+}
 
 export default function Perfil() {
   const { user, updateUser, logout } = useAuthStore()
@@ -30,15 +50,26 @@ export default function Perfil() {
     } catch { toast.error('Erro ao atualizar') } finally { setSavingProfile(false) }
   }
 
+  // Validação em tempo real da nova senha
+  const pwCheck = useMemo(() => checkPassword(passForm.newPassword), [passForm.newPassword])
+  const pwAllOk = Object.values(pwCheck).every(Boolean)
+
   const handlePassSave = async (e) => {
     e.preventDefault()
+    if (!passForm.currentPassword) { toast.error('Informe sua senha atual'); return }
+    if (!pwAllOk) { toast.error('A nova senha não atende aos requisitos'); return }
     if (passForm.newPassword !== passForm.confirm) { toast.error('Senhas não conferem'); return }
+
     setSavingPass(true)
     try {
       await api.put('/auth/password', { currentPassword: passForm.currentPassword, newPassword: passForm.newPassword })
       setPassForm({ currentPassword:'', newPassword:'', confirm:'' })
-      toast.success('Senha alterada!')
-    } catch (err) { toast.error(err.response?.data?.error || 'Erro ao alterar senha') } finally { setSavingPass(false) }
+      toast.success('Senha alterada com sucesso! 🔒')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao alterar senha')
+    } finally {
+      setSavingPass(false)
+    }
   }
 
   // Redimensiona e comprime imagem no navegador antes de enviar
@@ -150,12 +181,76 @@ export default function Perfil() {
 
       {/* Change password */}
       <Card className="p-6">
-        <h3 className="font-bold text-white mb-4 flex items-center gap-2"><FiLock size={16} className="text-brand-400" />Alterar Senha</h3>
+        <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+          <FiLock size={16} className="text-brand-400" />Alterar Senha
+        </h3>
         <form onSubmit={handlePassSave} className="space-y-4">
-          <Input label="Senha atual" type="password" placeholder="••••••••" value={passForm.currentPassword} onChange={e => setPassForm({...passForm, currentPassword: e.target.value})} icon={<FiLock size={15} />} />
-          <Input label="Nova senha" type="password" placeholder="Mínimo 6 caracteres" value={passForm.newPassword} onChange={e => setPassForm({...passForm, newPassword: e.target.value})} icon={<FiLock size={15} />} />
-          <Input label="Confirmar nova senha" type="password" placeholder="Repita a nova senha" value={passForm.confirm} onChange={e => setPassForm({...passForm, confirm: e.target.value})} icon={<FiLock size={15} />} />
-          <Button type="submit" loading={savingPass} variant="secondary" icon={<FiSave size={14} />}>Alterar Senha</Button>
+          <Input
+            label="Senha atual"
+            type="password"
+            placeholder="••••••••"
+            value={passForm.currentPassword}
+            onChange={e => setPassForm({...passForm, currentPassword: e.target.value})}
+            icon={<FiLock size={15} />}
+            required
+          />
+
+          <div>
+            <Input
+              label="Nova senha"
+              type="password"
+              placeholder="Crie uma senha forte"
+              value={passForm.newPassword}
+              onChange={e => setPassForm({...passForm, newPassword: e.target.value})}
+              icon={<FiLock size={15} />}
+              required
+            />
+
+            {/* Requisitos da senha em tempo real */}
+            {passForm.newPassword && (
+              <motion.div
+                initial={{ opacity:0, height:0 }}
+                animate={{ opacity:1, height:'auto' }}
+                className="mt-2 p-3 rounded-xl bg-dark-600/50 border border-white/5 space-y-1.5">
+                <p className="text-xs font-semibold text-slate-300 mb-1.5">Requisitos da senha:</p>
+                <PasswordRequirement ok={pwCheck.length}  label="Mínimo 8 caracteres" />
+                <PasswordRequirement ok={pwCheck.upper}   label="1 letra maiúscula (A-Z)" />
+                <PasswordRequirement ok={pwCheck.lower}   label="1 letra minúscula (a-z)" />
+                <PasswordRequirement ok={pwCheck.number}  label="1 número (0-9)" />
+                <PasswordRequirement ok={pwCheck.special} label="1 caractere especial (!@#$% etc.)" />
+              </motion.div>
+            )}
+          </div>
+
+          <Input
+            label="Confirmar nova senha"
+            type="password"
+            placeholder="Repita a nova senha"
+            value={passForm.confirm}
+            onChange={e => setPassForm({...passForm, confirm: e.target.value})}
+            icon={<FiLock size={15} />}
+            required
+          />
+
+          {/* Indicador de match */}
+          {passForm.confirm && (
+            <div className={`flex items-center gap-2 text-xs ${
+              passForm.newPassword === passForm.confirm ? 'text-accent-400' : 'text-red-400'
+            }`}>
+              {passForm.newPassword === passForm.confirm
+                ? <><FiCheck size={12} /> As senhas conferem</>
+                : <><FiX size={12} /> As senhas não conferem</>}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            loading={savingPass}
+            disabled={!pwAllOk || passForm.newPassword !== passForm.confirm || !passForm.currentPassword}
+            variant="secondary"
+            icon={<FiSave size={14} />}>
+            Alterar Senha
+          </Button>
         </form>
       </Card>
 
