@@ -9,12 +9,32 @@
 
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-dark-900 text-white font-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+
+  /* Headings com tracking apertado para look premium */
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Foco acessível e bonito */
+  *:focus-visible {
+    outline: 2px solid theme('colors.brand.500');
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-brand-500/30 text-white;
   }
 
   ::-webkit-scrollbar {
@@ -138,6 +158,109 @@
   border: 1px solid transparent;
   background: linear-gradient(#1a1a27, #1a1a27) padding-box,
               linear-gradient(135deg, #6366f1, #10b981) border-box;
+}
+
+/* ============================================================
+   COMPONENTES PREMIUM EXTRAS
+   ============================================================ */
+
+/* Skeleton loader (placeholder de carregamento bonito) */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border-radius: 0.75rem;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.05),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+html:not(.dark) .skeleton { background: rgba(15,23,42,0.06); }
+html:not(.dark) .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(15,23,42,0.06), transparent);
+}
+
+/* Glass morphism aprimorado */
+.glass-card {
+  background: rgba(26, 26, 39, 0.55);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+html:not(.dark) .glass-card {
+  background: rgba(255,255,255,0.65);
+  border-color: rgba(15,23,42,0.06);
+}
+
+/* Texto com sombra suave para cards de hero */
+.text-shadow-soft {
+  text-shadow: 0 2px 24px rgba(0,0,0,0.4);
+}
+
+/* Hover lift suave (alternativa ao Framer) */
+.lift-hover {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lift-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px -12px rgba(99,102,241,0.25);
+}
+
+/* Animação suave de entrada usada por listas */
+.fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Divisor com gradiente */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(99,102,241,0.3) 30%,
+    rgba(255,255,255,0.05) 70%,
+    transparent 100%
+  );
+}
+
+/* Botão flutuante de ação rápida */
+.fab {
+  position: fixed;
+  bottom: 5rem;
+  right: 1.5rem;
+  z-index: 30;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #10b981);
+  color: white;
+  box-shadow: 0 12px 32px -4px rgba(99,102,241,0.5);
+  transition: transform 0.2s ease;
+}
+.fab:hover { transform: scale(1.08); }
+.fab:active { transform: scale(0.95); }
+
+@media (min-width: 1024px) {
+  .fab { bottom: 1.5rem; }
 }
 
 /* =============================================================

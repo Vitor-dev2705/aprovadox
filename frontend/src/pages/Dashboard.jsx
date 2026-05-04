@@ -2,40 +2,48 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
-import { FiClock, FiTarget, FiZap, FiCalendar, FiBookOpen,
-         FiArrowRight, FiTrendingUp, FiAward, FiAlertCircle } from 'react-icons/fi'
+import {
+  FiClock, FiTarget, FiZap, FiCalendar, FiBookOpen,
+  FiArrowRight, FiTrendingUp, FiAward, FiAlertCircle, FiPlay
+} from 'react-icons/fi'
 import { dashboardService } from '../services/dashboard.service'
 import { useAuthStore } from '../store/authStore'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import ProgressBar from '../components/ui/ProgressBar'
+import PageHeader from '../components/ui/PageHeader'
 import Loader from '../components/ui/Loader'
 
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-function StatCard({ icon: Icon, label, value, sub, color = 'brand', onClick }) {
-  const colors = {
-    brand:   'from-brand-500/20 to-brand-600/5 border-brand-500/20 text-brand-400',
-    success: 'from-accent-500/20 to-accent-600/5 border-accent-500/20 text-accent-400',
-    orange:  'from-orange-500/20 to-orange-600/5 border-orange-500/20 text-orange-400',
-    purple:  'from-purple-500/20 to-purple-600/5 border-purple-500/20 text-purple-400',
+function StatCard({ icon: Icon, label, value, sub, color = 'brand', onClick, delay = 0 }) {
+  const palette = {
+    brand:   { bg: 'from-brand-500/15 to-brand-500/5',     border: 'border-brand-500/20',   text: 'text-brand-400',   accent: '#6366f1' },
+    success: { bg: 'from-accent-500/15 to-accent-500/5',   border: 'border-accent-500/20',  text: 'text-accent-400',  accent: '#10b981' },
+    orange:  { bg: 'from-orange-500/15 to-orange-500/5',   border: 'border-orange-500/20',  text: 'text-orange-400',  accent: '#f59e0b' },
+    purple:  { bg: 'from-purple-500/15 to-purple-500/5',   border: 'border-purple-500/20',  text: 'text-purple-400',  accent: '#a855f7' },
   }
+  const c = palette[color]
   return (
     <motion.div
-      whileHover={{ y: -4 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -3 }}
       onClick={onClick}
-      className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5 cursor-pointer transition-all`}
+      className={`relative overflow-hidden bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-5 cursor-pointer transition-all hover:shadow-lg hover:shadow-black/20`}
     >
+      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${c.accent}, transparent)` }} />
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl bg-current/10 flex items-center justify-center`}>
-          <Icon size={20} className="opacity-80" />
+        <div className={`w-10 h-10 rounded-xl bg-current/10 flex items-center justify-center ${c.text}`}>
+          <Icon size={20} />
         </div>
-        {sub && <span className="text-xs text-slate-500">{sub}</span>}
+        {sub && <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{sub}</span>}
       </div>
-      <p className="text-2xl font-black text-white mb-1">{value}</p>
+      <p className="text-3xl font-black text-white mb-0.5 tracking-tight">{value}</p>
       <p className="text-sm text-slate-400">{label}</p>
     </motion.div>
   )
@@ -44,8 +52,8 @@ function StatCard({ icon: Icon, label, value, sub, color = 'brand', onClick }) {
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-dark-600 border border-white/10 rounded-xl px-4 py-3 text-sm">
-      <p className="text-slate-400 mb-1">{DIAS[label] || label}</p>
+    <div className="bg-dark-600 border border-white/10 rounded-xl px-4 py-3 text-sm shadow-xl">
+      <p className="text-slate-400 mb-1 text-xs">{DIAS[label] || label}</p>
       <p className="text-white font-bold">{Math.round(payload[0]?.value || 0)}h estudadas</p>
     </div>
   )
@@ -71,9 +79,10 @@ export default function Dashboard() {
   const semanaH = (d.semana_minutos / 60).toFixed(1)
   const mesH = (d.mes_minutos / 60).toFixed(1)
 
+  const todayDow = new Date().getDay()
   const chartData = DIAS.map((dia, i) => {
     const found = d.grafico_semana?.find(g => parseInt(g.dia) === i)
-    return { dia, horas: found ? (parseInt(found.min) / 60) : 0 }
+    return { dia, horas: found ? (parseInt(found.min) / 60) : 0, isToday: i === todayDow }
   })
 
   const metaPct = d.meta_diaria
@@ -82,88 +91,100 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      {/* Welcome + frase */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-white">Dashboard 🎯</h1>
-          <p className="text-slate-400 text-sm mt-1 italic">"{d.frase_motivacional}"</p>
-        </div>
-        <Button onClick={() => navigate('/cronometro')} icon={<FiClock size={16} />}>
-          Iniciar Estudo
-        </Button>
-      </div>
+      <PageHeader
+        emoji="🎯"
+        title="Dashboard"
+        subtitle={`"${d.frase_motivacional}"`}
+        badge="Visão geral"
+        actions={
+          <Button onClick={() => navigate('/cronometro')} icon={<FiPlay size={14} />}>
+            Iniciar Estudo
+          </Button>
+        }
+      />
 
-      {/* Stats grid */}
+      {/* Stats grid premium */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={FiClock}      label="Hoje"     value={`${hojeH}h`}  sub="horas"  color="brand"   onClick={() => navigate('/estatisticas')} />
-        <StatCard icon={FiTrendingUp} label="Semana"   value={`${semanaH}h`} sub="horas"  color="success" onClick={() => navigate('/estatisticas')} />
-        <StatCard icon={FiAward}      label="Mês"      value={`${mesH}h`}   sub="horas"  color="purple"  onClick={() => navigate('/estatisticas')} />
-        <StatCard icon={FiZap}        label="Sequência" value={`${d.streak}🔥`} sub="dias"  color="orange"  onClick={() => navigate('/gamificacao')} />
+        <StatCard delay={0.0} icon={FiClock}      label="Hoje"      value={`${hojeH}h`}   sub="horas"  color="brand"   onClick={() => navigate('/estatisticas')} />
+        <StatCard delay={0.1} icon={FiTrendingUp} label="Semana"    value={`${semanaH}h`} sub="horas"  color="success" onClick={() => navigate('/estatisticas')} />
+        <StatCard delay={0.2} icon={FiAward}      label="Mês"       value={`${mesH}h`}    sub="horas"  color="purple"  onClick={() => navigate('/estatisticas')} />
+        <StatCard delay={0.3} icon={FiZap}        label="Sequência" value={`${d.streak}🔥`} sub="dias" color="orange"  onClick={() => navigate('/gamificacao')} />
       </div>
 
       {/* Meta diária */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <FiTarget size={18} className="text-brand-400" />
-            <span className="font-semibold text-white">Meta Diária</span>
+      <Card accent="#6366f1" className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center">
+              <FiTarget size={18} className="text-brand-400" />
+            </div>
+            <div>
+              <p className="font-bold text-white">Meta Diária</p>
+              <p className="text-xs text-slate-500">
+                {d.hoje_minutos} min hoje {d.meta_diaria ? `de ${d.meta_diaria.valor_alvo * 60} min` : ''}
+              </p>
+            </div>
           </div>
           <Badge variant={metaPct >= 100 ? 'success' : 'primary'}>
-            {Math.round(metaPct)}%
+            {Math.round(metaPct)}% concluída
           </Badge>
         </div>
-        <ProgressBar value={metaPct} color={metaPct >= 100 ? 'success' : 'brand'} size="lg" />
-        <p className="text-xs text-slate-500 mt-2">
-          {d.hoje_minutos} min estudados {d.meta_diaria ? `de ${d.meta_diaria.valor_alvo * 60} min` : 'hoje'}
-        </p>
+        <ProgressBar value={metaPct} color={metaPct >= 100 ? 'success' : 'rainbow'} size="lg" />
       </Card>
 
       {/* Charts row */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Weekly chart */}
-        <Card className="p-5 lg:col-span-2">
+      <div className="grid lg:grid-cols-3 gap-5">
+        <Card accent="#10b981" className="p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-white">Horas esta semana</h3>
-            <span className="text-xs text-slate-500">Total: {semanaH}h</span>
+            <div>
+              <h3 className="font-bold text-white">Esta semana</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{semanaH}h estudadas</p>
+            </div>
+            <Badge variant="success" dot>Em curso</Badge>
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} barSize={28}>
-              <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+              <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} />
               <YAxis hide />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.08)' }} />
-              <Bar dataKey="horas" radius={[6,6,0,0]}>
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={new Date().getDay() === i ? '#6366f1' : '#1a1a27'} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
+              <Bar dataKey="horas" radius={[8,8,0,0]}>
+                {chartData.map((entry, i) => (
+                  <Cell key={i} fill={entry.isToday ? '#6366f1' : '#1a1a27'} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </Card>
 
-        {/* Level + XP */}
-        <Card className="p-5 flex flex-col gap-4">
+        <Card accent="#a855f7" className="p-5 flex flex-col gap-4">
           <h3 className="font-bold text-white">Seu Progresso</h3>
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <div className="relative w-24 h-24">
+            <div className="relative w-28 h-28">
               <svg viewBox="0 0 100 100" className="transform -rotate-90 w-full h-full">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#1a1a27" strokeWidth="10" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#1a1a27" strokeWidth="8" />
                 <motion.circle
-                  cx="50" cy="50" r="40" fill="none" stroke="#6366f1" strokeWidth="10"
+                  cx="50" cy="50" r="42" fill="none"
+                  stroke="url(#progGrad)" strokeWidth="8"
                   strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 40}`}
-                  initial={{ strokeDashoffset: 2 * Math.PI * 40 }}
-                  animate={{ strokeDashoffset: 2 * Math.PI * 40 * (1 - ((d.user?.xp % 100) / 100)) }}
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 42 }}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 42 * (1 - ((user?.xp % 100) / 100)) }}
                   transition={{ duration: 1.5, ease: 'easeOut' }}
                 />
+                <defs>
+                  <linearGradient id="progGrad">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#10b981" />
+                  </linearGradient>
+                </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black gradient-text">{d.user?.level || 1}</span>
-                <span className="text-xs text-slate-500">Nível</span>
+                <span className="text-3xl font-black gradient-text">{user?.level || 1}</span>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Nível</span>
               </div>
             </div>
             <div className="text-center w-full">
-              <p className="text-sm text-slate-400 mb-2">{d.user?.xp % 100}/100 XP para o próximo nível</p>
-              <ProgressBar value={(d.user?.xp % 100)} max={100} color="rainbow" />
+              <p className="text-xs text-slate-400 mb-2">{user?.xp % 100}/100 XP para o nível {(user?.level || 1) + 1}</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => navigate('/gamificacao')}>
@@ -173,34 +194,36 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revisoes pendentes */}
-        <Card className="p-5">
+      <div className="grid lg:grid-cols-2 gap-5">
+        <Card accent="#f59e0b" className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <FiCalendar size={18} className="text-yellow-400" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/15 border border-yellow-500/25 flex items-center justify-center">
+                <FiCalendar size={18} className="text-yellow-400" />
+              </div>
               <h3 className="font-bold text-white">Revisões Pendentes</h3>
             </div>
             <Badge variant={d.revisoes_pendentes > 0 ? 'warning' : 'success'}>
-              {d.revisoes_pendentes} pendentes
+              {d.revisoes_pendentes}
             </Badge>
           </div>
           {d.revisoes_pendentes > 0 ? (
-            <div>
-              <p className="text-slate-400 text-sm mb-4">Você tem revisões para fazer hoje!</p>
-              <Button onClick={() => navigate('/revisoes')} size="sm">
-                Ver Revisões <FiArrowRight size={14} />
+            <>
+              <p className="text-slate-400 text-sm mb-4">Você tem revisões para fazer hoje. Não pula!</p>
+              <Button onClick={() => navigate('/revisoes')} size="sm" icon={<FiArrowRight size={14} />}>
+                Ver Revisões
               </Button>
-            </div>
+            </>
           ) : (
             <p className="text-slate-400 text-sm">✅ Nenhuma revisão pendente. Continue assim!</p>
           )}
         </Card>
 
-        {/* Matéria top */}
-        <Card className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <FiBookOpen size={18} className="text-accent-400" />
+        <Card accent="#10b981" className="p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-accent-500/15 border border-accent-500/25 flex items-center justify-center">
+              <FiBookOpen size={18} className="text-accent-400" />
+            </div>
             <h3 className="font-bold text-white">Matéria em Destaque</h3>
           </div>
           {d.materia_top ? (
@@ -226,20 +249,18 @@ export default function Dashboard() {
       </div>
 
       {/* Questoes alert */}
-      <Card className="p-5 bg-gradient-to-r from-dark-700 to-dark-700 border border-brand-500/10">
+      <Card accent="#8b5cf6" className="p-5" hover onClick={() => navigate('/questoes')}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center flex-shrink-0">
-              <FiAlertCircle size={20} className="text-brand-400" />
+            <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center flex-shrink-0">
+              <FiAlertCircle size={20} className="text-purple-400" />
             </div>
             <div>
               <p className="font-semibold text-white">Banco de Questões Erradas</p>
-              <p className="text-sm text-slate-400">Registre questões para revisar depois</p>
+              <p className="text-sm text-slate-400">Registre questões para revisar depois e nunca mais errar</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate('/questoes')}>
-            Acessar <FiArrowRight size={14} />
-          </Button>
+          <FiArrowRight className="text-slate-500" />
         </div>
       </Card>
     </div>
