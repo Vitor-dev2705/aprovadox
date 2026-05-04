@@ -131,9 +131,31 @@ export default function Perfil() {
                 <p className="text-xs text-slate-500">Aparência da interface</p>
               </div>
             </div>
-            <button onClick={toggleTheme}
-              className={`relative w-12 h-6 rounded-full transition-all ${theme === 'dark' ? 'bg-brand-500' : 'bg-slate-600'}`}>
-              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${theme === 'dark' ? 'left-7' : 'left-1'}`} />
+            <button onClick={toggleTheme} aria-label="Alternar tema"
+              className={`relative w-14 h-7 rounded-full transition-all duration-300 ${theme === 'dark' ? 'bg-brand-500' : 'bg-yellow-400'}`}>
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center text-[10px] ${theme === 'dark' ? 'left-8' : 'left-1'}`}>
+                {theme === 'dark' ? '🌙' : '☀️'}
+              </span>
+            </button>
+          </div>
+
+          {/* Botões rápidos para escolher direto */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button onClick={() => useThemeStore.getState().setTheme('light')}
+              className={`p-3 rounded-xl border transition-all text-sm font-medium flex items-center justify-center gap-2 ${
+                theme === 'light'
+                  ? 'border-yellow-400/50 bg-yellow-400/10 text-yellow-400'
+                  : 'border-white/10 text-slate-400 hover:text-white'
+              }`}>
+              <FiSun size={14} /> Claro
+            </button>
+            <button onClick={() => useThemeStore.getState().setTheme('dark')}
+              className={`p-3 rounded-xl border transition-all text-sm font-medium flex items-center justify-center gap-2 ${
+                theme === 'dark'
+                  ? 'border-brand-500/50 bg-brand-500/10 text-brand-400'
+                  : 'border-white/10 text-slate-400 hover:text-white'
+              }`}>
+              <FiMoon size={14} /> Escuro
             </button>
           </div>
         </div>
