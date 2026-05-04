@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   email            VARCHAR(255) UNIQUE NOT NULL,
   password_hash    VARCHAR(255) NOT NULL,
   avatar_url       TEXT,
+  data_nascimento  DATE,
   xp               INTEGER DEFAULT 0,
   level            INTEGER DEFAULT 1,
   streak           INTEGER DEFAULT 0,
@@ -18,6 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at       TIMESTAMP DEFAULT NOW(),
   updated_at       TIMESTAMP DEFAULT NOW()
 );
+
+-- Migration para bancos existentes
+ALTER TABLE users ADD COLUMN IF NOT EXISTS data_nascimento DATE;
 
 CREATE TABLE IF NOT EXISTS concursos (
   id         SERIAL PRIMARY KEY,

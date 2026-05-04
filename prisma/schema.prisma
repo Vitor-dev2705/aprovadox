@@ -14,6 +14,7 @@ model User {
   email          String   @unique
   passwordHash   String   @map("password_hash")
   avatarUrl      String?  @map("avatar_url")
+  dataNascimento DateTime? @map("data_nascimento") @db.Date
   xp             Int      @default(0)
   level          Int      @default(1)
   streak         Int      @default(0)

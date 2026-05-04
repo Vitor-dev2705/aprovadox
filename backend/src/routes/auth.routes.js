@@ -12,6 +12,8 @@ const upload = multer({ storage, limits: { fileSize: 2 * 1024 * 1024 } });
 
 router.post('/register', ctrl.register);
 router.post('/login', ctrl.login);
+router.post('/forgot-password', ctrl.forgotPassword);
+router.post('/reset-password', ctrl.resetPassword);
 router.get('/profile', auth, ctrl.getProfile);
 router.put('/profile', auth, ctrl.updateProfile);
 router.put('/password', auth, ctrl.changePassword);

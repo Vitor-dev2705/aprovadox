@@ -70,9 +70,9 @@ export default function Login() {
                 <input type="checkbox" className="rounded" />
                 Lembrar-me
               </label>
-              <button type="button" className="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+              <Link to="/esqueci-senha" className="text-sm text-brand-400 hover:text-brand-300 transition-colors">
                 Esqueceu a senha?
-              </button>
+              </Link>
             </div>
 
             <Button type="submit" size="lg" loading={isLoading} className="w-full mt-2">

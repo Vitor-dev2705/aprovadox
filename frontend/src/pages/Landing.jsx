@@ -257,7 +257,7 @@ export default function Landing() {
           </div>
           <span className="font-black gradient-text">AprovadoX</span>
         </div>
-        <p className="text-slate-500 text-sm">© 2024 AprovadoX. Sua aprovação começa aqui.</p>
+        <p className="text-slate-500 text-sm">© {new Date().getFullYear()} AprovadoX. Sua aprovação começa aqui.</p>
       </footer>
     </div>
   )

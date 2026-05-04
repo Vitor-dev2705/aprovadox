@@ -27,10 +27,10 @@ export const useAuthStore = create(
         }
       },
 
-      register: async (name, email, password) => {
+      register: async (name, email, password, data_nascimento) => {
         set({ isLoading: true })
         try {
-          const { data } = await api.post('/auth/register', { name, email, password })
+          const { data } = await api.post('/auth/register', { name, email, password, data_nascimento })
           set({ user: data.user, token: data.token, isAuthenticated: true })
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
           toast.success('Conta criada! Sua jornada começa agora 🚀')

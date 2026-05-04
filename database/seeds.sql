@@ -2,11 +2,13 @@
 -- AprovadoX - Seed de Usuário Demo
 -- =============================================================
 -- Senha: demo123 (hash bcrypt)
-INSERT INTO users (name, email, password_hash, xp, level, streak, plan)
+-- Data de nascimento: 1995-06-15 (use essa data para testar a recuperação de senha)
+INSERT INTO users (name, email, password_hash, data_nascimento, xp, level, streak, plan)
 VALUES (
   'Demo AprovadoX',
   'demo@aprovadox.com',
   '$2a$12$on1mi/CSfun9izM0iNKJYuJVUlr9kRM7zZoJNHk1bFw.A2iWbUZzK',
+  '1995-06-15',
   250, 3, 7, 'premium'
 ) ON CONFLICT DO NOTHING;
 

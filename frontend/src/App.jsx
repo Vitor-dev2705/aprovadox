@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import EsqueciSenha from './pages/EsqueciSenha'
 import Dashboard from './pages/Dashboard'
 import Cronometro from './pages/Cronometro'
 import Concursos from './pages/Concursos'
@@ -33,6 +34,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/cadastro" element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/esqueci-senha" element={<PublicRoute><EsqueciSenha /></PublicRoute>} />
 
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
