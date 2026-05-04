@@ -1,9 +1,30 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FiBell, FiSearch, FiZap, FiCheck } from 'react-icons/fi'
+import { FiBell, FiSearch, FiZap, FiCheck, FiCheckCircle } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import { notificacaoService } from '../../services/notificacao.service'
+
+// =====================================================
+// Persistência local de notificações lidas
+// (chave por usuário para não misturar entre logins)
+// =====================================================
+const SEEN_KEY_PREFIX = 'aprovadox-seen-notifs:'
+
+function loadSeenIds(userId) {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY_PREFIX + userId)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveSeenIds(userId, seenSet) {
+  try {
+    localStorage.setItem(SEEN_KEY_PREFIX + userId, JSON.stringify([...seenSet]))
+  } catch {}
+}
 
 export default function Header({ sidebarCollapsed }) {
   const { user } = useAuthStore()
@@ -11,6 +32,7 @@ export default function Header({ sidebarCollapsed }) {
   const [bellOpen, setBellOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [loadingNotif, setLoadingNotif] = useState(false)
+  const [seenIds, setSeenIds] = useState(() => loadSeenIds(user?.id))
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
 
@@ -28,9 +50,28 @@ export default function Header({ sidebarCollapsed }) {
 
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 60000) // refresh a cada 1 min
+    const interval = setInterval(fetchNotifications, 60000)
     return () => clearInterval(interval)
   }, [])
+
+  // Recarregar seenIds se o user mudar
+  useEffect(() => {
+    setSeenIds(loadSeenIds(user?.id))
+  }, [user?.id])
+
+  // Quando o sino é aberto: marcar todas as notificações ATUAIS como lidas
+  useEffect(() => {
+    if (bellOpen && notifications.length > 0) {
+      // pequeno delay para o usuário "ver" o badge antes de zerar
+      const timer = setTimeout(() => {
+        const newSeen = new Set(seenIds)
+        notifications.forEach(n => newSeen.add(n.id))
+        setSeenIds(newSeen)
+        saveSeenIds(user?.id, newSeen)
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [bellOpen, notifications, user?.id]) // eslint-disable-line
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {
@@ -51,13 +92,34 @@ export default function Header({ sidebarCollapsed }) {
   }
 
   const handleNotifClick = (notif) => {
+    // marca como lida individualmente
+    const newSeen = new Set(seenIds)
+    newSeen.add(notif.id)
+    setSeenIds(newSeen)
+    saveSeenIds(user?.id, newSeen)
     setBellOpen(false)
     if (notif.url) navigate(notif.url)
   }
 
+  const handleMarkAllRead = (e) => {
+    e.stopPropagation()
+    const newSeen = new Set(seenIds)
+    notifications.forEach(n => newSeen.add(n.id))
+    setSeenIds(newSeen)
+    saveSeenIds(user?.id, newSeen)
+  }
+
   const avatar = user?.avatar_url || user?.avatarUrl
-  const unreadCount = notifications.length
-  const hasHigh = notifications.some(n => n.priority === 'high')
+
+  // Conta apenas notificações NÃO LIDAS para o badge
+  const unreadCount = useMemo(
+    () => notifications.filter(n => !seenIds.has(n.id)).length,
+    [notifications, seenIds]
+  )
+  const hasHighUnread = useMemo(
+    () => notifications.some(n => !seenIds.has(n.id) && n.priority === 'high'),
+    [notifications, seenIds]
+  )
 
   return (
     <header className="h-16 bg-dark-800/80 backdrop-blur-xl border-b border-white/5 flex items-center gap-4 px-6 sticky top-0 z-30">
@@ -105,15 +167,18 @@ export default function Header({ sidebarCollapsed }) {
             onClick={() => setBellOpen(!bellOpen)}
             className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
             <FiBell size={18} className={bellOpen ? 'text-brand-400' : ''} />
-            {unreadCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${
-                  hasHigh ? 'bg-red-500 text-white animate-pulse' : 'bg-brand-500 text-white'
-                }`}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </motion.span>
-            )}
+            <AnimatePresence>
+              {unreadCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${
+                    hasHighUnread ? 'bg-red-500 text-white animate-pulse' : 'bg-brand-500 text-white'
+                  }`}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
 
           {/* Dropdown */}
@@ -129,13 +194,27 @@ export default function Header({ sidebarCollapsed }) {
                 <div className="p-4 border-b border-white/5 flex items-center justify-between">
                   <div>
                     <p className="font-bold text-white text-sm">Notificações</p>
-                    <p className="text-xs text-slate-500">{unreadCount} {unreadCount === 1 ? 'item' : 'itens'} para você</p>
+                    <p className="text-xs text-slate-500">
+                      {unreadCount > 0
+                        ? `${unreadCount} ${unreadCount === 1 ? 'nova' : 'novas'}`
+                        : `${notifications.length} ${notifications.length === 1 ? 'item' : 'itens'}`}
+                    </p>
                   </div>
-                  <button
-                    onClick={fetchNotifications}
-                    className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
-                    Atualizar
-                  </button>
+                  <div className="flex gap-2">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        title="Marcar todas como lidas"
+                        className="text-xs text-accent-400 hover:text-accent-300 transition-colors flex items-center gap-1">
+                        <FiCheckCircle size={12} /> Marcar lidas
+                      </button>
+                    )}
+                    <button
+                      onClick={fetchNotifications}
+                      className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
+                      Atualizar
+                    </button>
+                  </div>
                 </div>
 
                 <div className="max-h-96 overflow-y-auto">
@@ -153,30 +232,42 @@ export default function Header({ sidebarCollapsed }) {
                       <p className="text-xs text-slate-500 mt-1">Sem notificações pendentes</p>
                     </div>
                   ) : (
-                    notifications.map(n => (
-                      <button
-                        key={n.id}
-                        onClick={() => handleNotifClick(n)}
-                        className="w-full text-left p-3 hover:bg-white/5 transition-all border-b border-white/5 last:border-0 flex gap-3 items-start">
-                        <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
-                          style={{
-                            backgroundColor: (n.color || '#6366f1') + '25',
-                            border: `1px solid ${(n.color || '#6366f1')}40`,
-                          }}>
-                          {n.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-sm font-semibold text-white truncate">{n.title}</p>
-                            {n.priority === 'high' && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-                            )}
+                    notifications.map(n => {
+                      const isRead = seenIds.has(n.id)
+                      return (
+                        <button
+                          key={n.id}
+                          onClick={() => handleNotifClick(n)}
+                          className={`w-full text-left p-3 transition-all border-b border-white/5 last:border-0 flex gap-3 items-start relative ${
+                            isRead ? 'opacity-60 hover:opacity-100 hover:bg-white/5' : 'bg-brand-500/[0.04] hover:bg-white/5'
+                          }`}>
+                          {/* Indicador de não-lida (bolinha azul) */}
+                          {!isRead && (
+                            <span className="absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-brand-400" />
+                          )}
+
+                          <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base ml-2"
+                            style={{
+                              backgroundColor: (n.color || '#6366f1') + '25',
+                              border: `1px solid ${(n.color || '#6366f1')}40`,
+                            }}>
+                            {n.icon}
                           </div>
-                          <p className="text-xs text-slate-400 line-clamp-2">{n.message}</p>
-                        </div>
-                      </button>
-                    ))
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className={`text-sm truncate ${isRead ? 'font-medium text-slate-300' : 'font-semibold text-white'}`}>
+                                {n.title}
+                              </p>
+                              {!isRead && n.priority === 'high' && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-400 line-clamp-2">{n.message}</p>
+                          </div>
+                        </button>
+                      )
+                    })
                   )}
                 </div>
 
