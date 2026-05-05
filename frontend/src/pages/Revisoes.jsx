@@ -80,7 +80,7 @@ export default function Revisoes() {
                   <div className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: r.materia_cor || '#6366f1' }} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{r.assunto_nome || r.materia_nome}</p>
+                    <p className="text-sm font-medium text-white truncate">{r.conteudo_titulo || r.assunto_nome || r.materia_nome}</p>
                     <p className="text-xs text-slate-500">{r.materia_nome}</p>
                   </div>
                 </div>
@@ -122,14 +122,14 @@ export default function Revisoes() {
           ))}
         </div>
         <p className="text-xs text-slate-500 mt-3">
-          Após registrar uma sessão de estudo com um assunto, o sistema agenda automaticamente revisões para te ajudar a memorizar de forma definitiva.
+          Após registrar uma sessão de estudo com um conteúdo selecionado, o sistema agenda automaticamente revisões para te ajudar a memorizar de forma definitiva.
         </p>
       </Card>
 
       {/* List */}
       {!revisoes.length ? (
         <EmptyState icon={FiCalendar} title="Nenhuma revisão pendente"
-          description="Estude um assunto para que o sistema agende revisões automáticas." />
+          description="Estude um conteúdo para que o sistema agende revisões automáticas." />
       ) : (
         <div className="space-y-2">
           {revisoes.map((r, i) => (
@@ -140,7 +140,7 @@ export default function Revisoes() {
                     <div className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: r.materia_cor || '#6366f1' }} />
                     <div className="min-w-0">
-                      <p className="font-medium text-white text-sm truncate">{r.assunto_nome || r.materia_nome}</p>
+                      <p className="font-medium text-white text-sm truncate">{r.conteudo_titulo || r.assunto_nome || r.materia_nome}</p>
                       <p className="text-xs text-slate-500">
                         {r.materia_nome} • {new Date(r.data_revisao).toLocaleDateString('pt-BR')}
                       </p>

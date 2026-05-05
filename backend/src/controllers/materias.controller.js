@@ -46,16 +46,30 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { nome, cor, meta_semanal_horas, concurso_id, peso, assuntos } = req.body;
+    const { nome, cor, meta_semanal_horas, concurso_id, peso, assuntos, conteudos } = req.body;
     const result = await pool.query(
       'INSERT INTO materias (user_id, concurso_id, nome, cor, meta_semanal_horas, peso) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [req.userId, concurso_id, nome, cor || '#6366f1', meta_semanal_horas || 5, peso || 1]
     );
     const materia = result.rows[0];
 
+    // Assuntos (legado, mantido)
     if (assuntos && assuntos.length) {
       for (let i = 0; i < assuntos.length; i++) {
         await pool.query('INSERT INTO assuntos (materia_id, nome, ordem) VALUES ($1, $2, $3)', [materia.id, assuntos[i], i]);
+      }
+    }
+
+    // Conteúdos (NOVO — criado junto com a matéria)
+    if (conteudos && conteudos.length) {
+      for (let i = 0; i < conteudos.length; i++) {
+        const titulo = String(conteudos[i] || '').trim();
+        if (!titulo) continue;
+        await pool.query(
+          `INSERT INTO conteudos (user_id, materia_id, titulo, tipo, ordem)
+           VALUES ($1, $2, $3, 'anotacao', $4)`,
+          [req.userId, materia.id, titulo, i]
+        );
       }
     }
 

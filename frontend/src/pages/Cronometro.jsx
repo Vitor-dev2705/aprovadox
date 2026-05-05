@@ -148,10 +148,8 @@ export default function Cronometro() {
     }
   }, [selectedMateria])
 
-  // Assuntos visíveis: filtra pelo conteúdo se houver, senão todos
-  const assuntosFiltrados = selectedConteudo
-    ? assuntosAll.filter(a => a.conteudo_id === Number(selectedConteudo))
-    : assuntosAll
+  // Assuntos da matéria — sempre mostra todos (independente do conteúdo)
+  const assuntosFiltrados = assuntosAll
 
   // Auto-cycle do Pomodoro
   useEffect(() => {
@@ -208,6 +206,7 @@ export default function Cronometro() {
     try {
       const { data } = await sessaoService.create({
         materia_id: selectedMateria,
+        conteudo_id: selectedConteudo || null,
         assunto_id: selectedAssunto || null,
         tecnica: selectedTecnica,
         duracao_minutos: duracao,
@@ -439,9 +438,9 @@ export default function Cronometro() {
             </div>
           )}
 
-          {/* Assunto - filtrado por conteúdo se houver */}
+          {/* Assunto - sempre mostra todos da matéria */}
           <Select
-            label={selectedConteudo ? 'Assunto (deste conteúdo)' : 'Assunto'}
+            label="Assunto"
             options={assuntosFiltrados.map(a => ({ value: a.id, label: a.nome }))}
             placeholder="Selecionar assunto"
             value={selectedAssunto || ''}

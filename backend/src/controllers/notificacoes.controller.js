@@ -14,14 +14,14 @@ exports.getAll = async (req, res) => {
     const userId = req.userId;
     const notifications = [];
 
-    // 1) REVISÕES PENDENTES (hoje ou atrasadas)
+    // 1) REVISÕES PENDENTES (hoje ou atrasadas) - agora baseado em CONTEÚDO
     const reviews = await pool.query(`
       SELECT r.id, r.tipo, r.data_revisao,
              m.nome as materia_nome, m.cor as materia_cor,
-             a.nome as assunto_nome
+             c.titulo as conteudo_titulo
       FROM revisoes r
       LEFT JOIN materias m ON r.materia_id = m.id
-      LEFT JOIN assuntos a ON r.assunto_id = a.id
+      LEFT JOIN conteudos c ON r.conteudo_id = c.id
       WHERE r.user_id = $1 AND r.data_revisao <= CURRENT_DATE AND r.concluida = false
       ORDER BY r.data_revisao ASC
       LIMIT 5
@@ -35,7 +35,7 @@ exports.getAll = async (req, res) => {
         priority: atrasada ? 'high' : 'medium',
         icon: '🔄',
         title: atrasada ? 'Revisão atrasada' : 'Revisão para hoje',
-        message: `${r.assunto_nome || r.materia_nome || 'Conteúdo'} — ${r.tipo}`,
+        message: `${r.conteudo_titulo || r.materia_nome || 'Conteúdo'} — ${r.tipo}`,
         url: '/revisoes',
         color: r.materia_cor || '#6366f1',
         created_at: new Date().toISOString(),

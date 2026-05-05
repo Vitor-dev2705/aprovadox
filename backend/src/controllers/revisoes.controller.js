@@ -1,17 +1,24 @@
 const pool = require('../config/database');
 
+const SELECT_REVISAO = `
+  SELECT r.*,
+    m.nome as materia_nome, m.cor as materia_cor,
+    c.titulo as conteudo_titulo, c.tipo as conteudo_tipo,
+    a.nome as assunto_nome
+  FROM revisoes r
+  LEFT JOIN materias m ON r.materia_id = m.id
+  LEFT JOIN conteudos c ON r.conteudo_id = c.id
+  LEFT JOIN assuntos a ON r.assunto_id = a.id
+`;
+
 exports.getAll = async (req, res) => {
   try {
     const { pendentes, data } = req.query;
-    let query = `SELECT r.*, m.nome as materia_nome, m.cor as materia_cor, a.nome as assunto_nome
-      FROM revisoes r
-      LEFT JOIN materias m ON r.materia_id = m.id
-      LEFT JOIN assuntos a ON r.assunto_id = a.id
-      WHERE r.user_id = $1`;
+    let query = `${SELECT_REVISAO} WHERE r.user_id = $1`;
     const params = [req.userId];
     let i = 1;
 
-    if (pendentes === 'true') { query += ' AND r.concluida = false'; }
+    if (pendentes === 'true') query += ' AND r.concluida = false';
     if (data) { i++; query += ` AND r.data_revisao = $${i}`; params.push(data); }
 
     query += ' ORDER BY r.data_revisao ASC';
@@ -25,10 +32,7 @@ exports.getAll = async (req, res) => {
 exports.getToday = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT r.*, m.nome as materia_nome, m.cor as materia_cor, a.nome as assunto_nome
-       FROM revisoes r
-       LEFT JOIN materias m ON r.materia_id = m.id
-       LEFT JOIN assuntos a ON r.assunto_id = a.id
+      `${SELECT_REVISAO}
        WHERE r.user_id = $1 AND r.data_revisao <= CURRENT_DATE AND r.concluida = false
        ORDER BY r.data_revisao ASC`,
       [req.userId]
