@@ -20,6 +20,10 @@ export const useStudyStore = create(
       materiaName: null,
       materiaCor: null,
 
+      selectedConteudo: null,
+      conteudoTitulo: null,
+      conteudoTipo: null,
+
       selectedAssunto: null,
       selectedTecnica: 'Pomodoro',
       notes: '',
@@ -30,7 +34,15 @@ export const useStudyStore = create(
       _intervalId: null,          // NÃO persistido
 
       // ============ Setters ============
-      setMateria: (id, name, cor) => set({ selectedMateria: id, materiaName: name, materiaCor: cor }),
+      setMateria: (id, name, cor) => set({
+        selectedMateria: id, materiaName: name, materiaCor: cor,
+        selectedConteudo: null, conteudoTitulo: null, conteudoTipo: null,
+        selectedAssunto: null,
+      }),
+      setConteudo: (id, titulo, tipo) => set({
+        selectedConteudo: id, conteudoTitulo: titulo, conteudoTipo: tipo,
+        selectedAssunto: null,
+      }),
       setAssunto: (id) => set({ selectedAssunto: id }),
       setTecnica: (tecnica) => set({ selectedTecnica: tecnica }),
       setNotes: (notes) => set({ notes }),
@@ -82,6 +94,8 @@ export const useStudyStore = create(
         set({
           isRunning: false, isPaused: false, seconds: 0, startTime: null,
           notes: '', pomodoroPhase: 'work', pomodoroCount: 0,
+          selectedConteudo: null, conteudoTitulo: null, conteudoTipo: null,
+          selectedAssunto: null,
         })
       },
 
@@ -126,6 +140,9 @@ export const useStudyStore = create(
         selectedMateria: state.selectedMateria,
         materiaName: state.materiaName,
         materiaCor: state.materiaCor,
+        selectedConteudo: state.selectedConteudo,
+        conteudoTitulo: state.conteudoTitulo,
+        conteudoTipo: state.conteudoTipo,
         selectedAssunto: state.selectedAssunto,
         selectedTecnica: state.selectedTecnica,
         notes: state.notes,

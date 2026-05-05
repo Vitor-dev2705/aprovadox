@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
-  FiPlay, FiPause, FiSquare, FiBook, FiClock, FiVolume2, FiVolumeX, FiAlertTriangle
+  FiPlay, FiPause, FiSquare, FiBook, FiClock, FiVolume2, FiVolumeX,
+  FiAlertTriangle, FiVideo, FiFileText, FiGlobe, FiLayers, FiEdit, FiBookOpen
 } from 'react-icons/fi'
 import { sessaoService } from '../services/sessao.service'
 import { materiaService } from '../services/materia.service'
+import { conteudoService } from '../services/conteudo.service'
 import { useStudyStore } from '../store/studyStore'
 import { useAuthStore } from '../store/authStore'
 import Card from '../components/ui/Card'
@@ -21,6 +23,21 @@ const TECNICAS = [
   { value: 'Questões',         label: '📝 Resolução de Questões' },
   { value: 'Leitura',          label: '📖 Leitura Ativa' },
 ]
+
+const TIPO_ICON = {
+  video: FiVideo,
+  pdf: FiFileText,
+  site: FiGlobe,
+  livro: FiBookOpen,
+  curso: FiLayers,
+  flashcard: FiLayers,
+  anotacao: FiEdit,
+}
+
+const TIPO_COR = {
+  video: '#ef4444', pdf: '#dc2626', site: '#3b82f6', livro: '#10b981',
+  curso: '#8b5cf6', flashcard: '#f59e0b', anotacao: '#64748b',
+}
 
 const POMODORO_WORK = 25 * 60
 const POMODORO_BREAK = 5 * 60
@@ -75,7 +92,7 @@ function TimerCircle({ seconds, isRunning, max }) {
 }
 
 export default function Cronometro() {
-  // Estado vem do store global persistido
+  // Store global
   const isRunning       = useStudyStore(s => s.isRunning)
   const isPaused        = useStudyStore(s => s.isPaused)
   const seconds         = useStudyStore(s => s.seconds)
@@ -83,12 +100,16 @@ export default function Cronometro() {
   const selectedMateria = useStudyStore(s => s.selectedMateria)
   const materiaName     = useStudyStore(s => s.materiaName)
   const materiaCor      = useStudyStore(s => s.materiaCor)
+  const selectedConteudo = useStudyStore(s => s.selectedConteudo)
+  const conteudoTitulo  = useStudyStore(s => s.conteudoTitulo)
+  const conteudoTipo    = useStudyStore(s => s.conteudoTipo)
   const selectedAssunto = useStudyStore(s => s.selectedAssunto)
   const selectedTecnica = useStudyStore(s => s.selectedTecnica)
   const notes           = useStudyStore(s => s.notes)
   const pomodoroPhase   = useStudyStore(s => s.pomodoroPhase)
   const pomodoroCount   = useStudyStore(s => s.pomodoroCount)
   const setMateria      = useStudyStore(s => s.setMateria)
+  const setConteudo     = useStudyStore(s => s.setConteudo)
   const setAssunto      = useStudyStore(s => s.setAssunto)
   const setTecnica      = useStudyStore(s => s.setTecnica)
   const setNotes        = useStudyStore(s => s.setNotes)
@@ -99,7 +120,8 @@ export default function Cronometro() {
 
   // UI local
   const [materias, setMaterias] = useState([])
-  const [assuntos, setAssuntos] = useState([])
+  const [conteudos, setConteudos] = useState([])
+  const [assuntosAll, setAssuntosAll] = useState([])
   const [soundOn, setSoundOn] = useState(true)
   const lastBeepRef = useRef(0)
   const { updateUser } = useAuthStore()
@@ -108,13 +130,28 @@ export default function Cronometro() {
     materiaService.getAll().then(r => setMaterias(r.data)).catch(() => setMaterias([]))
   }, [])
 
+  // Quando matéria muda, carrega conteúdos + todos os assuntos da matéria
   useEffect(() => {
     if (selectedMateria) {
-      materiaService.getById(selectedMateria).then(r => setAssuntos(r.data.assuntos || [])).catch(() => setAssuntos([]))
+      Promise.all([
+        conteudoService.getByMateria(selectedMateria),
+        materiaService.getById(selectedMateria),
+      ])
+        .then(([rConteudos, rMateria]) => {
+          setConteudos(rConteudos.data || [])
+          setAssuntosAll(rMateria.data?.assuntos || [])
+        })
+        .catch(() => { setConteudos([]); setAssuntosAll([]) })
     } else {
-      setAssuntos([])
+      setConteudos([])
+      setAssuntosAll([])
     }
   }, [selectedMateria])
+
+  // Assuntos visíveis: filtra pelo conteúdo se houver, senão todos
+  const assuntosFiltrados = selectedConteudo
+    ? assuntosAll.filter(a => a.conteudo_id === Number(selectedConteudo))
+    : assuntosAll
 
   // Auto-cycle do Pomodoro
   useEffect(() => {
@@ -187,6 +224,8 @@ export default function Cronometro() {
   }
 
   const pomodoroLimit = pomodoroPhase === 'work' ? POMODORO_WORK : POMODORO_BREAK
+  const ConteudoIcon = conteudoTipo ? TIPO_ICON[conteudoTipo] : null
+  const conteudoCorAtiva = conteudoTipo ? TIPO_COR[conteudoTipo] : null
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20 lg:pb-0">
@@ -196,13 +235,10 @@ export default function Cronometro() {
         subtitle="Registre seu tempo de estudo em tempo real"
         badge="Modo foco"
         actions={
-          isRunning ? (
-            <Badge variant="success" dot>Rodando em segundo plano</Badge>
-          ) : null
+          isRunning ? <Badge variant="success" dot>Rodando em segundo plano</Badge> : null
         }
       />
 
-      {/* ALERTA: matéria obrigatória */}
       {!selectedMateria && !isRunning && !isPaused && (
         <motion.div
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -219,13 +255,22 @@ export default function Cronometro() {
       )}
 
       <div className="grid lg:grid-cols-5 gap-6">
-        {/* Timer Card */}
+        {/* Timer */}
         <Card accent={materiaCor || '#6366f1'} className="lg:col-span-3 p-8 flex flex-col items-center gap-6">
+          {/* Chip da matéria + conteúdo */}
           {materiaName && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-              style={{ backgroundColor: (materiaCor || '#6366f1') + '20', border: `1px solid ${(materiaCor || '#6366f1')}40` }}>
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: materiaCor || '#6366f1' }} />
-              <span className="text-xs font-semibold" style={{ color: materiaCor || '#818cf8' }}>{materiaName}</span>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                style={{ backgroundColor: (materiaCor || '#6366f1') + '20', border: `1px solid ${(materiaCor || '#6366f1')}40` }}>
+                <FiBook size={11} style={{ color: materiaCor || '#818cf8' }} />
+                <span className="text-xs font-semibold" style={{ color: materiaCor || '#818cf8' }}>{materiaName}</span>
+              </div>
+              {conteudoTitulo && (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-dark-600 border border-white/10">
+                  {ConteudoIcon && <ConteudoIcon size={10} style={{ color: conteudoCorAtiva }} />}
+                  <span className="text-xs text-slate-300">{conteudoTitulo}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -256,7 +301,6 @@ export default function Cronometro() {
                     ? 'bg-gradient-to-br from-brand-500 to-accent-500 shadow-brand-500/40 neon-glow cursor-pointer'
                     : 'bg-dark-600 border-2 border-white/10 opacity-50 cursor-not-allowed'
                 }`}
-                title={canStart ? 'Iniciar estudo' : 'Selecione uma matéria primeiro'}
               >
                 <FiPlay size={28} className="text-white ml-1" />
               </motion.button>
@@ -275,7 +319,6 @@ export default function Cronometro() {
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 onClick={handleStop}
                 className="w-12 h-12 rounded-full bg-red-500/20 border-2 border-red-500/50 flex items-center justify-center"
-                title="Finalizar e salvar sessão"
               >
                 <FiSquare size={20} className="text-red-400" />
               </motion.button>
@@ -297,13 +340,13 @@ export default function Cronometro() {
           />
         </Card>
 
-        {/* Settings */}
+        {/* Configuração */}
         <Card className="lg:col-span-2 p-5 flex flex-col gap-4">
           <h3 className="font-bold text-white flex items-center gap-2">
             <FiBook size={16} className="text-brand-400" /> Configurar Sessão
           </h3>
 
-          {/* Matéria - OBRIGATÓRIO */}
+          {/* Matéria */}
           <div>
             <label className="text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-2">
               Matéria
@@ -317,7 +360,6 @@ export default function Cronometro() {
                 const id = e.target.value
                 const mat = materias.find(m => String(m.id) === String(id))
                 setMateria(id ? Number(id) : null, mat?.nome || null, mat?.cor || null)
-                setAssunto(null)
               }}
             >
               <option value="">— Selecione uma matéria —</option>
@@ -325,17 +367,82 @@ export default function Cronometro() {
                 <option key={m.id} value={m.id}>{m.nome}</option>
               ))}
             </select>
-            {(isRunning || isPaused) && (
-              <p className="text-xs text-slate-500 mt-1">A matéria não pode ser trocada durante a sessão</p>
-            )}
             {!materias.length && (
               <p className="text-xs text-yellow-400 mt-1">⚠️ Cadastre uma matéria primeiro em "Matérias"</p>
             )}
           </div>
 
+          {/* CONTEÚDO da matéria — NOVO */}
+          {selectedMateria && (
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-2">
+                Conteúdo
+                <span className="text-slate-500 text-xs">(opcional)</span>
+              </label>
+
+              {conteudos.length === 0 ? (
+                <div className="p-3 rounded-xl bg-dark-600/50 border border-white/5">
+                  <p className="text-xs text-slate-500">
+                    Nenhum conteúdo cadastrado. Adicione vídeos, PDFs ou livros em "Matérias".
+                  </p>
+                </div>
+              ) : (
+                <select
+                  className="input-field text-sm"
+                  value={selectedConteudo || ''}
+                  disabled={isRunning || isPaused}
+                  onChange={e => {
+                    const id = e.target.value
+                    const c = conteudos.find(x => String(x.id) === String(id))
+                    setConteudo(id ? Number(id) : null, c?.titulo || null, c?.tipo || null)
+                  }}
+                >
+                  <option value="">— Sem conteúdo específico —</option>
+                  {conteudos.map(c => {
+                    const labelTipo = (c.tipo || 'anotacao').toUpperCase()
+                    return (
+                      <option key={c.id} value={c.id}>
+                        [{labelTipo}] {c.titulo}
+                      </option>
+                    )
+                  })}
+                </select>
+              )}
+
+              {/* Chips visuais dos conteúdos */}
+              {conteudos.length > 0 && !isRunning && !isPaused && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {conteudos.slice(0, 6).map(c => {
+                    const Icon = TIPO_ICON[c.tipo] || FiEdit
+                    const cor = TIPO_COR[c.tipo] || '#64748b'
+                    const active = String(selectedConteudo) === String(c.id)
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setConteudo(active ? null : Number(c.id), active ? null : c.titulo, active ? null : c.tipo)}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all ${
+                          active ? 'border' : 'border border-white/5 hover:border-white/10'
+                        }`}
+                        style={active
+                          ? { backgroundColor: cor + '20', borderColor: cor + '50', color: cor }
+                          : { color: '#94a3b8' }
+                        }
+                      >
+                        <Icon size={10} />
+                        <span className="truncate max-w-[110px]">{c.titulo}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Assunto - filtrado por conteúdo se houver */}
           <Select
-            label="Assunto"
-            options={assuntos.map(a => ({ value: a.id, label: a.nome }))}
+            label={selectedConteudo ? 'Assunto (deste conteúdo)' : 'Assunto'}
+            options={assuntosFiltrados.map(a => ({ value: a.id, label: a.nome }))}
             placeholder="Selecionar assunto"
             value={selectedAssunto || ''}
             onChange={e => setAssunto(e.target.value ? Number(e.target.value) : null)}
