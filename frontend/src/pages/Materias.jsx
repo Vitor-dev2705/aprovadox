@@ -16,7 +16,7 @@ import PageHeader from '../components/ui/PageHeader'
 import toast from 'react-hot-toast'
 
 const CORES = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#ef4444','#06b6d4']
-const EMPTY_FORM = { nome: '', cor: '#6366f1', conteudos_texto: '', assuntos_texto: '' }
+const EMPTY_FORM = { nome: '', cor: '#6366f1', conteudos_texto: '' }
 const EMPTY_CONTEUDO = { titulo: '', tipo: 'anotacao', url: '', descricao: '' }
 
 const TIPOS_CONTEUDO = [
@@ -31,7 +31,7 @@ const TIPOS_CONTEUDO = [
 
 const getTipoInfo = (tipo) => TIPOS_CONTEUDO.find(t => t.value === tipo) || TIPOS_CONTEUDO[6]
 
-/** Item de Conteúdo — sem checkbox, apenas info e ações */
+/** Item de Conteúdo — SEM CHECKBOX, apenas info e ações */
 function ConteudoItem({ conteudo, onDelete, onEdit }) {
   const info = getTipoInfo(conteudo.tipo)
   const Icon = info.icon
@@ -41,12 +41,12 @@ function ConteudoItem({ conteudo, onDelete, onEdit }) {
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       className="group flex items-start gap-3 p-3 rounded-xl border border-white/5 bg-dark-600/30 hover:border-white/10 transition-all"
     >
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ backgroundColor: info.color + '20', border: `1px solid ${info.color}40` }}>
-        <Icon size={15} style={{ color: info.color }} />
+        <Icon size={16} style={{ color: info.color }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{conteudo.titulo}</p>
+        <p className="text-sm font-semibold text-white truncate">{conteudo.titulo}</p>
         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: info.color }}>{info.label}</span>
         {conteudo.descricao && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{conteudo.descricao}</p>}
         {conteudo.url && (
@@ -58,20 +58,23 @@ function ConteudoItem({ conteudo, onDelete, onEdit }) {
         )}
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        <button onClick={() => onEdit(conteudo)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5"><FiEdit2 size={12} /></button>
-        <button onClick={() => onDelete(conteudo.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10"><FiTrash2 size={12} /></button>
+        <button onClick={() => onEdit(conteudo)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5">
+          <FiEdit2 size={12} />
+        </button>
+        <button onClick={() => onDelete(conteudo.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10">
+          <FiTrash2 size={12} />
+        </button>
       </div>
     </motion.div>
   )
 }
 
-function MateriaCard({ materia, onEdit, onDelete, onAddConteudo, onAddAssunto }) {
+/** Card de Matéria — apenas conteúdos, sem progresso/assuntos/meta */
+function MateriaCard({ materia, onEdit, onDelete, onAddConteudo }) {
   const [expanded, setExpanded] = useState(false)
-  const [tab, setTab] = useState('conteudos')
   const [conteudos, setConteudos] = useState([])
   const [loadingConteudos, setLoadingConteudos] = useState(false)
 
-  const totalAssuntos = materia.total_assuntos || 0
   const horas = Math.round((materia.horas_estudadas || 0) / 60 * 10) / 10
 
   const loadConteudos = async () => {
@@ -84,9 +87,9 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo, onAddAssunto })
   }
 
   useEffect(() => {
-    if (expanded && tab === 'conteudos') loadConteudos()
+    if (expanded) loadConteudos()
     // eslint-disable-next-line
-  }, [expanded, tab])
+  }, [expanded])
 
   const handleDeleteConteudo = async (id) => {
     if (!confirm('Remover este conteúdo?')) return
@@ -102,27 +105,34 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo, onAddAssunto })
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: materia.cor + '25', border: `1px solid ${materia.cor}50` }}>
-              <FiBookOpen size={20} style={{ color: materia.cor }} />
+              <FiBookOpen size={22} style={{ color: materia.cor }} />
             </div>
             <div>
-              <h3 className="font-bold text-white">{materia.nome}</h3>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                <FiClock size={11} />
-                <span>{horas}h estudadas</span>
+              <h3 className="font-bold text-white text-base">{materia.nome}</h3>
+              <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                <span className="flex items-center gap-1"><FiClock size={11} /> {horas}h</span>
+                <span className="flex items-center gap-1"><FiList size={11} /> {conteudos.length || materia.total_conteudos || '0'} conteúdos</span>
               </div>
             </div>
           </div>
           <div className="flex gap-1">
-            <button onClick={() => onEdit(materia)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5"><FiEdit2 size={14} /></button>
-            <button onClick={() => onDelete(materia.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10"><FiTrash2 size={14} /></button>
+            <button onClick={() => onEdit(materia)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5">
+              <FiEdit2 size={14} />
+            </button>
+            <button onClick={() => onDelete(materia.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10">
+              <FiTrash2 size={14} />
+            </button>
           </div>
         </div>
 
         <button onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-dark-600/50 hover:bg-dark-600 transition-all text-sm text-brand-400 font-medium">
-          <span>{expanded ? 'Recolher detalhes' : 'Ver detalhes'}</span>
+          className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl bg-dark-600/50 hover:bg-dark-600 transition-all text-sm text-brand-400 font-medium">
+          <span className="flex items-center gap-2">
+            <FiList size={14} />
+            {expanded ? 'Recolher conteúdos' : 'Ver conteúdos'}
+          </span>
           <motion.div animate={{ rotate: expanded ? 180 : 0 }}>
             <FiChevronDown size={14} />
           </motion.div>
@@ -137,75 +147,34 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo, onAddAssunto })
               className="overflow-hidden"
             >
               <div className="pt-4 mt-4 border-t border-white/5">
-                {/* TABS */}
-                <div className="flex gap-1 mb-3 p-1 bg-dark-600/50 rounded-xl">
-                  <button onClick={() => setTab('conteudos')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-                      tab === 'conteudos' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
-                    }`}>
-                    📚 Conteúdos ({conteudos.length})
-                  </button>
-                  <button onClick={() => setTab('assuntos')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-                      tab === 'assuntos' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
-                    }`}>
-                    📋 Assuntos ({totalAssuntos})
-                  </button>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">📚 Conteúdos</p>
                 </div>
 
-                {/* TAB CONTEÚDOS (principal) */}
-                {tab === 'conteudos' && (
-                  <div>
-                    {loadingConteudos ? (
-                      <div className="text-center py-4">
-                        <div className="inline-block w-5 h-5 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
-                      </div>
-                    ) : conteudos.length === 0 ? (
-                      <p className="text-xs text-slate-500 text-center py-3">
-                        Nenhum conteúdo ainda. Adicione tópicos como "Morfologia", "Sintaxe", etc.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {conteudos.map(c => (
-                          <ConteudoItem key={c.id} conteudo={c}
-                            onDelete={handleDeleteConteudo}
-                            onEdit={(item) => onAddConteudo(materia, item, loadConteudos)}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <Button size="sm" variant="outline" className="w-full mt-3"
-                      onClick={() => onAddConteudo(materia, null, loadConteudos)}
-                      icon={<FiPlus size={12} />}>
-                      Adicionar Conteúdo
-                    </Button>
+                {loadingConteudos ? (
+                  <div className="text-center py-4">
+                    <div className="inline-block w-5 h-5 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+                  </div>
+                ) : conteudos.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-4">
+                    Nenhum conteúdo ainda. Adicione tópicos como "Morfologia", "Sintaxe", etc.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {conteudos.map(c => (
+                      <ConteudoItem key={c.id} conteudo={c}
+                        onDelete={handleDeleteConteudo}
+                        onEdit={(item) => onAddConteudo(materia, item, loadConteudos)}
+                      />
+                    ))}
                   </div>
                 )}
 
-                {/* TAB ASSUNTOS — sem checkbox, só lista de tópicos */}
-                {tab === 'assuntos' && (
-                  <div>
-                    {!materia.assuntos?.length ? (
-                      <p className="text-xs text-slate-500 text-center py-3">Nenhum assunto cadastrado</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {materia.assuntos.map(a => (
-                          <div key={a.id} className="flex items-center gap-2.5 text-sm py-1 px-2 rounded-lg hover:bg-white/5">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: materia.cor }} />
-                            <span className="text-slate-300">{a.nome}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <Button size="sm" variant="outline" className="w-full mt-3"
-                      onClick={() => onAddAssunto(materia)}
-                      icon={<FiPlus size={12} />}>
-                      Adicionar Assunto
-                    </Button>
-                  </div>
-                )}
+                <Button size="sm" variant="outline" className="w-full mt-3"
+                  onClick={() => onAddConteudo(materia, null, loadConteudos)}
+                  icon={<FiPlus size={12} />}>
+                  Adicionar Conteúdo
+                </Button>
               </div>
             </motion.div>
           )}
@@ -224,19 +193,13 @@ export default function Materias() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
-  // Conteúdo (modal individual)
+  // Conteúdo modal
   const [conteudoModalOpen, setConteudoModalOpen] = useState(false)
   const [conteudoForm, setConteudoForm] = useState(EMPTY_CONTEUDO)
   const [conteudoEditId, setConteudoEditId] = useState(null)
   const [conteudoMateria, setConteudoMateria] = useState(null)
   const [conteudoRefreshFn, setConteudoRefreshFn] = useState(() => () => {})
   const [savingConteudo, setSavingConteudo] = useState(false)
-
-  // Assunto avulso
-  const [assuntoModalOpen, setAssuntoModalOpen] = useState(false)
-  const [assuntoNome, setAssuntoNome] = useState('')
-  const [assuntoMateria, setAssuntoMateria] = useState(null)
-  const [savingAssunto, setSavingAssunto] = useState(false)
 
   useEffect(() => {
     materiaService.getAll().then(r => setMaterias(r.data)).catch(() => setMaterias([])).finally(() => setLoading(false))
@@ -250,7 +213,7 @@ export default function Materias() {
   }
   const openEdit = (m) => {
     setEditItem(m)
-    setForm({ nome: m.nome, cor: m.cor, conteudos_texto: '', assuntos_texto: '' })
+    setForm({ nome: m.nome, cor: m.cor, conteudos_texto: '' })
     setModalTab('basico')
     setModalOpen(true)
   }
@@ -258,25 +221,15 @@ export default function Materias() {
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true)
     const conteudos = form.conteudos_texto.split('\n').map(s => s.trim()).filter(Boolean)
-    const assuntos = form.assuntos_texto.split('\n').map(s => s.trim()).filter(Boolean)
-    const payload = {
-      nome: form.nome,
-      cor: form.cor,
-      conteudos,
-      assuntos,
-    }
     try {
       if (editItem) {
         const r = await materiaService.update(editItem.id, { nome: form.nome, cor: form.cor })
         setMaterias(ms => ms.map(m => m.id === editItem.id ? { ...m, ...r.data } : m))
         toast.success('Matéria atualizada!')
       } else {
-        const r = await materiaService.create(payload)
+        const r = await materiaService.create({ nome: form.nome, cor: form.cor, conteudos })
         setMaterias(ms => [...ms, r.data])
-        const totaisCriados = []
-        if (conteudos.length) totaisCriados.push(`${conteudos.length} conteúdo(s)`)
-        if (assuntos.length) totaisCriados.push(`${assuntos.length} assunto(s)`)
-        toast.success(`Matéria criada${totaisCriados.length ? ' + ' + totaisCriados.join(' + ') : ''}!`)
+        toast.success(`Matéria criada${conteudos.length ? ` + ${conteudos.length} conteúdo(s)` : ''}!`)
       }
       setModalOpen(false)
     } catch { toast.error('Erro ao salvar') } finally { setSaving(false) }
@@ -288,7 +241,6 @@ export default function Materias() {
     catch { toast.error('Erro ao remover') }
   }
 
-  // CONTEÚDOS (modal individual avançado)
   const openConteudoModal = (materia, conteudo, refreshFn) => {
     setConteudoMateria(materia)
     setConteudoRefreshFn(() => refreshFn)
@@ -318,24 +270,6 @@ export default function Materias() {
     finally { setSavingConteudo(false) }
   }
 
-  // ASSUNTO avulso
-  const openAssuntoModal = (materia) => {
-    setAssuntoMateria(materia); setAssuntoNome(''); setAssuntoModalOpen(true)
-  }
-  const handleSaveAssunto = async (e) => {
-    e.preventDefault()
-    if (!assuntoNome.trim()) return
-    setSavingAssunto(true)
-    try {
-      const r = await materiaService.addAssunto(assuntoMateria.id, assuntoNome.trim())
-      setMaterias(ms => ms.map(m => m.id === assuntoMateria.id
-        ? { ...m, total_assuntos: (m.total_assuntos || 0) + 1, assuntos: [...(m.assuntos || []), r.data] }
-        : m))
-      toast.success('Assunto adicionado!')
-      setAssuntoModalOpen(false)
-    } catch { toast.error('Erro') } finally { setSavingAssunto(false) }
-  }
-
   if (loading) return <Loader />
 
   return (
@@ -350,7 +284,7 @@ export default function Materias() {
 
       {!materias.length ? (
         <EmptyState icon={FiBookOpen} title="Nenhuma matéria cadastrada"
-          description="Crie suas matérias para organizar o estudo, anotar conteúdos e fazer revisões."
+          description="Crie suas matérias e adicione conteúdos para organizar seus estudos."
           action={openAdd} actionLabel="Criar Matéria" />
       ) : (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -362,18 +296,16 @@ export default function Materias() {
                 onEdit={openEdit}
                 onDelete={handleDelete}
                 onAddConteudo={openConteudoModal}
-                onAddAssunto={openAssuntoModal}
               />
             </motion.div>
           ))}
         </div>
       )}
 
-      {/* MODAL: Criar/Editar Matéria com TABS */}
+      {/* MODAL: Criar/Editar Matéria */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}
         title={editItem ? 'Editar Matéria' : 'Nova Matéria'} size="lg">
         <form onSubmit={handleSave} className="space-y-4">
-          {/* TABS do modal */}
           {!editItem && (
             <div className="flex gap-1 p-1 bg-dark-600/50 rounded-xl">
               <button type="button" onClick={() => setModalTab('basico')}
@@ -388,16 +320,9 @@ export default function Materias() {
                 }`}>
                 📚 Conteúdos
               </button>
-              <button type="button" onClick={() => setModalTab('assuntos')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                  modalTab === 'assuntos' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
-                }`}>
-                📋 Assuntos
-              </button>
             </div>
           )}
 
-          {/* TAB: Informações */}
           {(editItem || modalTab === 'basico') && (
             <div className="space-y-4">
               <Input label="Nome da Matéria" placeholder="Ex: Português"
@@ -416,7 +341,6 @@ export default function Materias() {
             </div>
           )}
 
-          {/* TAB: Conteúdos */}
           {!editItem && modalTab === 'conteudos' && (
             <div className="space-y-3">
               <div>
@@ -439,43 +363,9 @@ export default function Materias() {
             </div>
           )}
 
-          {/* TAB: Assuntos */}
-          {!editItem && modalTab === 'assuntos' && (
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-2">
-                  📋 Assuntos opcionais
-                  <span className="text-xs text-slate-500 font-normal">(um por linha)</span>
-                </label>
-                <textarea
-                  placeholder={'Pronomes pessoais\nVerbos irregulares\nConjugação verbal'}
-                  className="input-field text-sm resize-none h-48"
-                  value={form.assuntos_texto}
-                  onChange={e => setForm({...form, assuntos_texto: e.target.value})}
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  Subtemas mais específicos (não obrigatório). Você pode deixar em branco.
-                </p>
-              </div>
-            </div>
-          )}
-
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} className="flex-1">Cancelar</Button>
             <Button type="submit" loading={saving} className="flex-1">Salvar</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL: Adicionar Assunto avulso */}
-      <Modal isOpen={assuntoModalOpen} onClose={() => setAssuntoModalOpen(false)}
-        title={`Novo Assunto${assuntoMateria ? ` · ${assuntoMateria.nome}` : ''}`} size="sm">
-        <form onSubmit={handleSaveAssunto} className="space-y-4">
-          <Input label="Nome do assunto" placeholder="Ex: Pronomes"
-            value={assuntoNome} onChange={e => setAssuntoNome(e.target.value)} autoFocus required />
-          <div className="flex gap-3">
-            <Button type="button" variant="secondary" onClick={() => setAssuntoModalOpen(false)} className="flex-1">Cancelar</Button>
-            <Button type="submit" loading={savingAssunto} className="flex-1">Adicionar</Button>
           </div>
         </form>
       </Modal>
