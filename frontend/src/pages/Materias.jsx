@@ -15,7 +15,12 @@ import Loader from '../components/ui/Loader'
 import PageHeader from '../components/ui/PageHeader'
 import toast from 'react-hot-toast'
 
-const CORES = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#ef4444','#06b6d4']
+const CORES = [
+  '#6366f1', '#10b981', '#f59e0b', '#3b82f6', 
+  '#ec4899', '#8b5cf6', '#ef4444', '#06b6d4',
+  '#84cc16', '#f97316', '#a855f7', '#14b8a6',
+  '#f43f5e', '#64748b', '#22c55e', '#eab308'
+]
 const EMPTY_FORM = { nome: '', cor: '#6366f1', conteudos_texto: '' }
 const EMPTY_CONTEUDO = { titulo: '', tipo: 'anotacao', url: '', descricao: '' }
 
