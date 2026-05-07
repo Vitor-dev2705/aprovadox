@@ -16,6 +16,7 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const planejamentoRoutes = require('./routes/planejamento.routes');
 const notificacoesRoutes = require('./routes/notificacoes.routes');
 const conteudosRoutes = require('./routes/conteudos.routes');
+const extracaoRoutes = require('./routes/extracao.routes');
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/planejamento', planejamentoRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/conteudos', conteudosRoutes);
+app.use('/api/extracao', extracaoRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
