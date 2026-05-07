@@ -25,7 +25,13 @@ const EMPTY_FORM = { nome: '', cor: '#6366f1', conteudos_texto: '' }
 const EMPTY_CONTEUDO = { titulo: '', tipo: 'anotacao', url: '', descricao: '' }
 
 const TIPOS_CONTEUDO = [
-  { value: 'Conteúdo',  label: 'Conteúdo',  icon: FiEdit,     color: '#64748b' },
+  { value: 'video',     label: 'Vídeo',     icon: FiVideo,    color: '#ef4444' },
+  { value: 'pdf',       label: 'PDF',       icon: FiFileText, color: '#dc2626' },
+  { value: 'site',      label: 'Site',      icon: FiGlobe,    color: '#3b82f6' },
+  { value: 'livro',     label: 'Livro',     icon: FiBook,     color: '#10b981' },
+  { value: 'curso',     label: 'Curso',     icon: FiLayers,   color: '#8b5cf6' },
+  { value: 'flashcard', label: 'Flashcard', icon: FiLayers,   color: '#f59e0b' },
+  { value: 'anotacao',  label: 'Anotação',  icon: FiEdit,     color: '#64748b' },
 ]
 
 const getTipoInfo = (tipo) => TIPOS_CONTEUDO.find(t => t.value === tipo) || TIPOS_CONTEUDO[6]
