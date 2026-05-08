@@ -75,7 +75,6 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo }) {
   const [conteudos, setConteudos] = useState([])
   const [loadingConteudos, setLoadingConteudos] = useState(false)
 
-  // ✅ CORRIGIDO: minutos para formato bonito
   const formatarTempo = (minutosTotal) => {
     const minutos = minutosTotal || 0
 
