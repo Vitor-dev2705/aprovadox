@@ -60,17 +60,16 @@ exports.create = async (req, res) => {
       [xp, req.userId]
     );
 
-    // Agendar revisões — baseado em CONTEÚDO (24h, 7d, 30d, 90d)
-    if (conteudo_id) {
-      const intervalDays = [1, 7, 30, 90];
-      const tipos = ['24h', '7d', '30d', '90d'];
-      for (let i = 0; i < intervalDays.length; i++) {
-        await pool.query(
-          `INSERT INTO revisoes (user_id, materia_id, conteudo_id, assunto_id, sessao_id, tipo, data_revisao)
-           VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE + $7::int)`,
-          [req.userId, materia_id, conteudo_id, assunto_id || null, sessao.id, tipos[i], intervalDays[i]]
-        );
-      }
+    // Agendar revisões espaçadas (24h, 7d, 30d, 90d)
+    // Funciona com ou sem conteúdo — se só a matéria foi selecionada, agenda revisão da matéria
+    const intervalDays = [1, 7, 30, 90];
+    const tipos = ['24h', '7d', '30d', '90d'];
+    for (let i = 0; i < intervalDays.length; i++) {
+      await pool.query(
+        `INSERT INTO revisoes (user_id, materia_id, conteudo_id, assunto_id, sessao_id, tipo, data_revisao)
+         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE + $7::int)`,
+        [req.userId, materia_id, conteudo_id || null, assunto_id || null, sessao.id, tipos[i], intervalDays[i]]
+      );
     }
 
     res.status(201).json({ ...sessao, xp_ganho: xp });

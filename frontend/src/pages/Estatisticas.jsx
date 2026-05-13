@@ -13,14 +13,26 @@ const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const COLORS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#ef4444','#06b6d4']
 
+function formatarTempo(minutos) {
+  if (!minutos || minutos <= 0) return '0min'
+  const h = Math.floor(minutos / 60)
+  const m = Math.round(minutos % 60)
+  if (h === 0) return `${m}min`
+  if (m === 0) return `${h}h`
+  return `${h}h${m}min`
+}
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-dark-600 border border-white/10 rounded-xl px-4 py-3 text-sm">
       <p className="text-slate-400 text-xs mb-1">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} className="font-bold" style={{ color: p.color }}>{p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}h</p>
-      ))}
+      {payload.map((p, i) => {
+        const val = parseFloat(p.value) || 0
+        const isMinutos = p.name === 'Minutos'
+        const texto = isMinutos ? formatarTempo(val) : formatarTempo(val * 60)
+        return <p key={i} className="font-bold" style={{ color: p.color }}>{p.name}: {texto}</p>
+      })}
     </div>
   )
 }
@@ -40,10 +52,10 @@ export default function Estatisticas() {
   if (loading) return <Loader />
   const d = stats || MOCK_STATS
 
-  const materiaChart = d.por_materia.map(m => ({ name: m.nome, horas: (m.minutos / 60).toFixed(1) }))
-  const diaChart = DIAS.map((dia, i) => { const f = d.por_dia.find(d => parseInt(d.dia) === i); return { dia, horas: f ? (f.minutos / 60).toFixed(1) : 0 } })
+  const materiaChart = d.por_materia.map(m => ({ name: m.nome, minutos: parseInt(m.minutos) || 0, label: formatarTempo(m.minutos) }))
+  const diaChart = DIAS.map((dia, i) => { const f = d.por_dia.find(d => parseInt(d.dia) === i); return { dia, minutos: f ? parseInt(f.minutos) : 0, label: formatarTempo(f?.minutos) } })
   const mesChart = d.evolucao_mensal.slice(0, 6).reverse().map(m => ({
-    mes: MESES[new Date(m.mes).getMonth()], horas: (m.minutos / 60).toFixed(1)
+    mes: MESES[new Date(m.mes).getMonth()], minutos: parseInt(m.minutos) || 0, label: formatarTempo(m.minutos)
   }))
   const horaChart = Array.from({ length: 24 }, (_, h) => {
     const f = d.por_hora.find(x => parseInt(x.hora) === h)
@@ -81,7 +93,7 @@ export default function Estatisticas() {
             {[
               { label:'Metas cumpridas', value:`${d.metas?.cumpridas || 0}/${d.metas?.total || 0}`, color:'text-accent-400' },
               { label:'Técnica favorita', value: d.por_tecnica?.[0]?.tecnica || 'Pomodoro', color:'text-brand-400' },
-              { label:'Dia mais produtivo', value: DIAS[diaChart.reduce((a,b) => parseFloat(b.horas) > parseFloat(a.horas) ? b : a, diaChart[0])?.dia ? DIAS.indexOf(diaChart.reduce((a,b) => parseFloat(b.horas) > parseFloat(a.horas) ? b : a, diaChart[0]).dia) : 1] || 'Segunda', color:'text-yellow-400' },
+              { label:'Dia mais produtivo', value: DIAS[diaChart.reduce((a,b) => b.minutos > a.minutos ? b : a, diaChart[0])?.dia ? DIAS.indexOf(diaChart.reduce((a,b) => b.minutos > a.minutos ? b : a, diaChart[0]).dia) : 1] || 'Segunda', color:'text-yellow-400' },
             ].map(({ label, value, color }) => (
               <Card key={label} className="p-4 text-center">
                 <p className={`text-xl font-black ${color} mb-1`}>{value}</p>
@@ -98,7 +110,7 @@ export default function Estatisticas() {
                 <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:12 }} />
                 <YAxis hide />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(99,102,241,0.08)' }} />
-                <Bar dataKey="horas" name="Horas" fill="#6366f1" radius={[6,6,0,0]} />
+                <Bar dataKey="minutos" name="Minutos" fill="#6366f1" radius={[6,6,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -109,13 +121,13 @@ export default function Estatisticas() {
         <div className="space-y-4">
           <div className="grid lg:grid-cols-2 gap-4">
             <Card className="p-5">
-              <h3 className="font-bold text-white mb-4">Horas por Matéria</h3>
+              <h3 className="font-bold text-white mb-4">Tempo por Matéria</h3>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={materiaChart} layout="vertical" barSize={18}>
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" width={140} tick={{ fill:'#94a3b8', fontSize:12 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(99,102,241,0.08)' }} />
-                  <Bar dataKey="horas" name="Horas" radius={[0,6,6,0]}>
+                  <Bar dataKey="minutos" name="Minutos" radius={[0,6,6,0]}>
                     {materiaChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Bar>
                 </BarChart>
@@ -126,10 +138,10 @@ export default function Estatisticas() {
               <h3 className="font-bold text-white mb-4">Distribuição</h3>
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
-                  <Pie data={materiaChart} dataKey="horas" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={40} paddingAngle={3}>
+                  <Pie data={materiaChart} dataKey="minutos" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={40} paddingAngle={3}>
                     {materiaChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend formatter={(v) => <span className="text-slate-300 text-xs">{v}</span>} />
                 </PieChart>
               </ResponsiveContainer>
@@ -147,7 +159,7 @@ export default function Estatisticas() {
               <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:11 }} />
               <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="horas" name="Horas" stroke="#6366f1" strokeWidth={3}
+              <Line type="monotone" dataKey="minutos" name="Minutos" stroke="#6366f1" strokeWidth={3}
                 dot={{ fill:'#6366f1', r:5 }} activeDot={{ r:7, fill:'#818cf8' }} />
             </LineChart>
           </ResponsiveContainer>

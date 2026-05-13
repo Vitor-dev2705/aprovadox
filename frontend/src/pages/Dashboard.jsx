@@ -51,10 +51,14 @@ function StatCard({ icon: Icon, label, value, sub, color = 'brand', onClick, del
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
+  const totalMin = Math.round((payload[0]?.value || 0) * 60)
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  const texto = h > 0 ? (m > 0 ? `${h}h${m}min` : `${h}h`) : `${m}min`
   return (
     <div className="bg-dark-600 border border-white/10 rounded-xl px-4 py-3 text-sm shadow-xl">
       <p className="text-slate-400 mb-1 text-xs">{DIAS[label] || label}</p>
-      <p className="text-white font-bold">{Math.round(payload[0]?.value || 0)}h estudadas</p>
+      <p className="text-white font-bold">{texto} estudados</p>
     </div>
   )
 }
@@ -75,9 +79,19 @@ export default function Dashboard() {
   if (loading) return <Loader text="Carregando seu dashboard..." />
 
   const d = data || getMockData()
-  const hojeH = (d.hoje_minutos / 60).toFixed(1)
-  const semanaH = (d.semana_minutos / 60).toFixed(1)
-  const mesH = (d.mes_minutos / 60).toFixed(1)
+
+  const formatarTempo = (minutos) => {
+    if (!minutos || minutos <= 0) return '0min'
+    const h = Math.floor(minutos / 60)
+    const m = Math.round(minutos % 60)
+    if (h === 0) return `${m}min`
+    if (m === 0) return `${h}h`
+    return `${h}h${m}min`
+  }
+
+  const hojeF = formatarTempo(d.hoje_minutos)
+  const semanaF = formatarTempo(d.semana_minutos)
+  const mesF = formatarTempo(d.mes_minutos)
 
   const todayDow = new Date().getDay()
   const chartData = DIAS.map((dia, i) => {
@@ -106,9 +120,9 @@ export default function Dashboard() {
 
       {/* Stats grid premium */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard delay={0.0} icon={FiClock}      label="Hoje"      value={`${hojeH}h`}   sub="horas"  color="brand"   onClick={() => navigate('/estatisticas')} />
-        <StatCard delay={0.1} icon={FiTrendingUp} label="Semana"    value={`${semanaH}h`} sub="horas"  color="success" onClick={() => navigate('/estatisticas')} />
-        <StatCard delay={0.2} icon={FiAward}      label="Mês"       value={`${mesH}h`}    sub="horas"  color="purple"  onClick={() => navigate('/estatisticas')} />
+        <StatCard delay={0.0} icon={FiClock}      label="Hoje"      value={hojeF}   sub="tempo"  color="brand"   onClick={() => navigate('/estatisticas')} />
+        <StatCard delay={0.1} icon={FiTrendingUp} label="Semana"    value={semanaF}  sub="tempo"  color="success" onClick={() => navigate('/estatisticas')} />
+        <StatCard delay={0.2} icon={FiAward}      label="Mês"       value={mesF}     sub="tempo"  color="purple"  onClick={() => navigate('/estatisticas')} />
         <StatCard delay={0.3} icon={FiZap}        label="Sequência" value={`${d.streak}🔥`} sub="dias" color="orange"  onClick={() => navigate('/gamificacao')} />
       </div>
 
@@ -122,7 +136,7 @@ export default function Dashboard() {
             <div>
               <p className="font-bold text-white">Meta Diária</p>
               <p className="text-xs text-slate-500">
-                {d.hoje_minutos} min hoje {d.meta_diaria ? `de ${d.meta_diaria.valor_alvo * 60} min` : ''}
+                {formatarTempo(d.hoje_minutos)} hoje {d.meta_diaria ? `de ${formatarTempo(d.meta_diaria.valor_alvo * 60)}` : ''}
               </p>
             </div>
           </div>
@@ -139,7 +153,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-white">Esta semana</h3>
-              <p className="text-xs text-slate-500 mt-0.5">{semanaH}h estudadas</p>
+              <p className="text-xs text-slate-500 mt-0.5">{semanaF} estudados</p>
             </div>
             <Badge variant="success" dot>Em curso</Badge>
           </div>
@@ -235,7 +249,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="font-semibold text-white">{d.materia_top.nome}</p>
-                <p className="text-sm text-slate-400">{Math.round(d.materia_top.min / 60)}h estudadas no total</p>
+                <p className="text-sm text-slate-400">{formatarTempo(d.materia_top.min)} estudados no total</p>
               </div>
             </div>
           ) : (
