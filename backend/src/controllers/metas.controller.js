@@ -15,6 +15,9 @@ exports.getAll = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { tipo, descricao, valor_alvo, periodo_inicio, periodo_fim } = req.body;
+    if (!tipo || !descricao) {
+      return res.status(400).json({ error: 'Tipo e descrição são obrigatórios' });
+    }
     const result = await pool.query(
       'INSERT INTO metas (user_id, tipo, descricao, valor_alvo, periodo_inicio, periodo_fim) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
       [req.userId, tipo, descricao, valor_alvo, periodo_inicio, periodo_fim]

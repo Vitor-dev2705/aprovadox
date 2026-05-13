@@ -47,17 +47,19 @@ CREATE TABLE IF NOT EXISTS materias (
 );
 
 CREATE TABLE IF NOT EXISTS assuntos (
-  id         SERIAL PRIMARY KEY,
-  materia_id INTEGER REFERENCES materias(id) ON DELETE CASCADE,
-  nome       VARCHAR(255) NOT NULL,
-  concluido  BOOLEAN DEFAULT false,
-  ordem      INTEGER DEFAULT 0
+  id          SERIAL PRIMARY KEY,
+  materia_id  INTEGER REFERENCES materias(id) ON DELETE CASCADE,
+  conteudo_id INTEGER,
+  nome        VARCHAR(255) NOT NULL,
+  concluido   BOOLEAN DEFAULT false,
+  ordem       INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sessoes_estudo (
   id               SERIAL PRIMARY KEY,
   user_id          INTEGER REFERENCES users(id) ON DELETE CASCADE,
   materia_id       INTEGER REFERENCES materias(id) ON DELETE SET NULL,
+  conteudo_id      INTEGER,
   assunto_id       INTEGER REFERENCES assuntos(id) ON DELETE SET NULL,
   tecnica          VARCHAR(50),
   duracao_minutos  INTEGER NOT NULL,
@@ -71,6 +73,7 @@ CREATE TABLE IF NOT EXISTS revisoes (
   id           SERIAL PRIMARY KEY,
   user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
   materia_id   INTEGER REFERENCES materias(id) ON DELETE SET NULL,
+  conteudo_id  INTEGER,
   assunto_id   INTEGER REFERENCES assuntos(id) ON DELETE SET NULL,
   sessao_id    INTEGER REFERENCES sessoes_estudo(id) ON DELETE SET NULL,
   tipo         VARCHAR(10) NOT NULL,
@@ -148,6 +151,24 @@ CREATE TABLE IF NOT EXISTS medalhas (
   icone          VARCHAR(50),
   data_conquista TIMESTAMP DEFAULT NOW()
 );
+
+-- Migrations para bancos existentes
+ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS conteudo_id INTEGER;
+ALTER TABLE sessoes_estudo ADD COLUMN IF NOT EXISTS conteudo_id INTEGER;
+ALTER TABLE revisoes ADD COLUMN IF NOT EXISTS conteudo_id INTEGER;
+
+-- Foreign keys para conteudo_id
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_assuntos_conteudo') THEN
+    ALTER TABLE assuntos ADD CONSTRAINT fk_assuntos_conteudo FOREIGN KEY (conteudo_id) REFERENCES conteudos(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_sessoes_conteudo') THEN
+    ALTER TABLE sessoes_estudo ADD CONSTRAINT fk_sessoes_conteudo FOREIGN KEY (conteudo_id) REFERENCES conteudos(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_revisoes_conteudo') THEN
+    ALTER TABLE revisoes ADD CONSTRAINT fk_revisoes_conteudo FOREIGN KEY (conteudo_id) REFERENCES conteudos(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_sessoes_user    ON sessoes_estudo(user_id);

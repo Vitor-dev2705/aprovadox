@@ -47,6 +47,9 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { nome, cor, meta_semanal_horas, concurso_id, peso, assuntos, conteudos } = req.body;
+    if (!nome || !nome.trim()) {
+      return res.status(400).json({ error: 'Nome da matéria é obrigatório' });
+    }
     const result = await pool.query(
       'INSERT INTO materias (user_id, concurso_id, nome, cor, meta_semanal_horas, peso) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [req.userId, concurso_id, nome, cor || '#6366f1', meta_semanal_horas || 5, peso || 1]
@@ -121,9 +124,13 @@ exports.addAssunto = async (req, res) => {
 exports.toggleAssunto = async (req, res) => {
   try {
     const result = await pool.query(
-      'UPDATE assuntos SET concluido = NOT concluido WHERE id = $1 RETURNING *',
-      [req.params.assuntoId]
+      `UPDATE assuntos SET concluido = NOT concluido
+       WHERE id = $1 AND materia_id = $2
+         AND EXISTS (SELECT 1 FROM materias WHERE id = $2 AND user_id = $3)
+       RETURNING *`,
+      [req.params.assuntoId, req.params.id, req.userId]
     );
+    if (!result.rows.length) return res.status(404).json({ error: 'Assunto não encontrado' });
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar assunto' });

@@ -85,9 +85,10 @@ export default function Dashboard() {
     return { dia, horas: found ? (parseInt(found.min) / 60) : 0, isToday: i === todayDow }
   })
 
-  const metaPct = d.meta_diaria
-    ? Math.min(100, (d.hoje_minutos / (d.meta_diaria.valor_alvo * 60)) * 100)
-    : Math.min(100, (d.hoje_minutos / 120) * 100)
+  const metaMinutos = d.meta_diaria?.valor_alvo ? d.meta_diaria.valor_alvo * 60 : 120
+  const metaPct = metaMinutos > 0
+    ? Math.min(100, (d.hoje_minutos / metaMinutos) * 100)
+    : 0
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

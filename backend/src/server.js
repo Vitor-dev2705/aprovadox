@@ -23,17 +23,20 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    // permite mesma origem (Vercel monorepo), localhost e a FRONTEND_URL definida
     if (!origin) return callback(null, true);
     const allowed = [
       process.env.FRONTEND_URL,
       'http://localhost:5173',
       'http://localhost:3000',
     ].filter(Boolean);
-    if (allowed.includes(origin) || /\.vercel\.app$/.test(new URL(origin).hostname)) {
-      return callback(null, true);
-    }
-    return callback(null, true); // permissivo para evitar bloqueio em prod
+    if (allowed.includes(origin)) return callback(null, true);
+    try {
+      const hostname = new URL(origin).hostname;
+      if (/\.vercel\.app$/.test(hostname) && hostname.includes('aprovado')) {
+        return callback(null, true);
+      }
+    } catch {}
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
@@ -43,23 +46,12 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Healthcheck — diagnóstico rápido sem auth
 app.get('/api/health', async (req, res) => {
   const pool = require('./config/database');
-  const status = {
-    api: 'ok',
-    env: {
-      DATABASE_URL: !!process.env.DATABASE_URL,
-      JWT_SECRET: !!process.env.JWT_SECRET,
-      NODE_ENV: process.env.NODE_ENV || 'undefined',
-    },
-    db: 'unknown',
-  };
+  const status = { api: 'ok', db: 'unknown' };
   try {
-    const r = await pool.query('SELECT NOW() as now, COUNT(*)::int as users FROM users');
+    await pool.query('SELECT 1');
     status.db = 'ok';
-    status.db_now = r.rows[0].now;
-    status.users_count = r.rows[0].users;
-  } catch (err) {
+  } catch {
     status.db = 'error';
-    status.db_error = err.message;
   }
   res.json(status);
 });

@@ -23,6 +23,9 @@ exports.getAll = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { materia_id, questao, alternativas, erro_cometido, explicacao_correta } = req.body;
+    if (!materia_id || !questao) {
+      return res.status(400).json({ error: 'Matéria e questão são obrigatórios' });
+    }
     const result = await pool.query(
       'INSERT INTO questoes_erradas (user_id, materia_id, questao, alternativas, erro_cometido, explicacao_correta) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
       [req.userId, materia_id, questao, JSON.stringify(alternativas), erro_cometido, explicacao_correta]

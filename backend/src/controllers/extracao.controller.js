@@ -43,6 +43,14 @@ const MATERIAS_COMUNS = [
  * Faz fetch da URL e retorna o texto extraído
  */
 async function fetchUrlText(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch { throw new Error('URL inválida'); }
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Protocolo não suportado');
+  const host = parsed.hostname;
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local') || /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(host)) {
+    throw new Error('URL não permitida');
+  }
+
   const fetchFn = global.fetch || (await import('node-fetch')).default;
   const response = await fetchFn(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AprovadoX/1.0)' },
@@ -159,7 +167,6 @@ exports.extrairDoEdital = async (req, res) => {
         console.error('Fetch error:', err.message);
         return res.status(400).json({
           error: 'Não foi possível acessar a URL. Tente colar o texto do edital diretamente.',
-          detail: err.message,
         });
       }
     }
@@ -188,6 +195,6 @@ exports.extrairDoEdital = async (req, res) => {
     });
   } catch (err) {
     console.error('EXTRACAO ERROR:', err);
-    res.status(500).json({ error: 'Erro ao extrair edital', detail: err.message });
+    res.status(500).json({ error: 'Erro ao extrair edital' });
   }
 };

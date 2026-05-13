@@ -19,6 +19,13 @@ exports.getAll = async (req, res) => {
 exports.upsert = async (req, res) => {
   try {
     const { dia_semana, materia_id, horas, horario_inicio, horario_fim } = req.body;
+    if (dia_semana == null || !materia_id) {
+      return res.status(400).json({ error: 'Dia da semana e matéria são obrigatórios' });
+    }
+    const dia = parseInt(dia_semana);
+    if (isNaN(dia) || dia < 0 || dia > 6) {
+      return res.status(400).json({ error: 'Dia da semana inválido (0-6)' });
+    }
     const result = await pool.query(
       `INSERT INTO planejamento_semanal (user_id, dia_semana, materia_id, horas, horario_inicio, horario_fim)
        VALUES ($1,$2,$3,$4,$5,$6)
@@ -59,9 +66,13 @@ exports.delete = async (req, res) => {
 
 exports.clearDay = async (req, res) => {
   try {
+    const dia = parseInt(req.params.dia);
+    if (isNaN(dia) || dia < 0 || dia > 6) {
+      return res.status(400).json({ error: 'Dia da semana inválido (0-6)' });
+    }
     await pool.query(
       'DELETE FROM planejamento_semanal WHERE user_id=$1 AND dia_semana=$2',
-      [req.userId, req.params.dia]
+      [req.userId, dia]
     );
     res.json({ message: 'Dia limpo' });
   } catch (err) {

@@ -34,6 +34,9 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { nome, banca, cargo, data_prova, edital_url } = req.body;
+    if (!nome || !nome.trim()) {
+      return res.status(400).json({ error: 'Nome do concurso é obrigatório' });
+    }
     const result = await pool.query(
       'INSERT INTO concursos (user_id, nome, banca, cargo, data_prova, edital_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [req.userId, nome, banca, cargo, data_prova, edital_url]

@@ -69,7 +69,7 @@ exports.register = async (req, res) => {
     res.status(201).json({ user: { ...user, xp: 50 }, token });
   } catch (err) {
     console.error('REGISTER ERROR:', err);
-    res.status(500).json({ error: 'Erro ao criar conta', detail: err.message });
+    res.status(500).json({ error: 'Erro ao criar conta' });
   }
 };
 
@@ -88,7 +88,7 @@ exports.login = async (req, res) => {
     res.json({ user: userData, token });
   } catch (err) {
     console.error('LOGIN ERROR:', err);
-    res.status(500).json({ error: 'Erro ao fazer login', detail: err.message });
+    res.status(500).json({ error: 'Erro ao fazer login' });
   }
 };
 
@@ -130,7 +130,7 @@ exports.forgotPassword = async (req, res) => {
     res.json({ resetToken, name: user.name, message: 'Verificação aprovada. Defina sua nova senha.' });
   } catch (err) {
     console.error('FORGOT ERROR:', err);
-    res.status(500).json({ error: 'Erro ao processar recuperação', detail: err.message });
+    res.status(500).json({ error: 'Erro ao processar recuperação' });
   }
 };
 
@@ -164,7 +164,7 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: 'Senha redefinida com sucesso! Faça login novamente.' });
   } catch (err) {
     console.error('RESET ERROR:', err);
-    res.status(500).json({ error: 'Erro ao redefinir senha', detail: err.message });
+    res.status(500).json({ error: 'Erro ao redefinir senha' });
   }
 };
 
@@ -201,6 +201,7 @@ exports.changePassword = async (req, res) => {
     if (passError) return res.status(400).json({ error: passError });
 
     const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.userId]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Usuário não encontrado' });
     const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
     if (!valid) return res.status(400).json({ error: 'Senha atual incorreta' });
 
@@ -229,6 +230,6 @@ exports.uploadAvatar = async (req, res) => {
     res.json({ avatar_url: avatar });
   } catch (err) {
     console.error('AVATAR ERROR:', err);
-    res.status(500).json({ error: 'Erro ao enviar avatar', detail: err.message });
+    res.status(500).json({ error: 'Erro ao enviar avatar' });
   }
 };

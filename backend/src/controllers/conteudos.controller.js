@@ -63,7 +63,7 @@ exports.create = async (req, res) => {
     res.status(201).json(conteudo);
   } catch (err) {
     console.error('CONTEUDOS CREATE ERROR:', err);
-    res.status(500).json({ error: 'Erro ao criar conteúdo', detail: err.message });
+    res.status(500).json({ error: 'Erro ao criar conteúdo' });
   }
 };
 

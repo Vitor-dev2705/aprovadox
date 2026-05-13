@@ -88,19 +88,22 @@ model Conteudo {
   ordem       Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  materia Materia @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+  materia  Materia   @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+  assuntos Assunto[]
 
   @@map("conteudos")
 }
 
 model Assunto {
-  id        Int     @id @default(autoincrement())
-  materiaId Int     @map("materia_id")
-  nome      String
-  concluido Boolean @default(false)
-  ordem     Int     @default(0)
+  id         Int     @id @default(autoincrement())
+  materiaId  Int     @map("materia_id")
+  conteudoId Int?    @map("conteudo_id")
+  nome       String
+  concluido  Boolean @default(false)
+  ordem      Int     @default(0)
 
   materia  Materia        @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+  conteudo Conteudo?      @relation(fields: [conteudoId], references: [id], onDelete: SetNull)
   sessoes  SessaoEstudo[]
   revisoes Revisao[]
 
@@ -111,6 +114,7 @@ model SessaoEstudo {
   id              Int      @id @default(autoincrement())
   userId          Int      @map("user_id")
   materiaId       Int?     @map("materia_id")
+  conteudoId      Int?     @map("conteudo_id")
   assuntoId       Int?     @map("assunto_id")
   tecnica         String?
   duracaoMinutos  Int      @map("duracao_minutos")
@@ -130,7 +134,9 @@ model Revisao {
   id          Int      @id @default(autoincrement())
   userId      Int      @map("user_id")
   materiaId   Int?     @map("materia_id")
+  conteudoId  Int?     @map("conteudo_id")
   assuntoId   Int?     @map("assunto_id")
+  sessaoId    Int?     @map("sessao_id")
   tipo        String
   dataRevisao DateTime @map("data_revisao") @db.Date
   concluida   Boolean  @default(false)

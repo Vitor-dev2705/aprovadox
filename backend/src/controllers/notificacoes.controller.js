@@ -148,6 +148,6 @@ exports.getAll = async (req, res) => {
     });
   } catch (err) {
     console.error('NOTIFICACOES ERROR:', err);
-    res.status(500).json({ error: 'Erro ao buscar notificações', detail: err.message });
+    res.status(500).json({ error: 'Erro ao buscar notificações' });
   }
 };
