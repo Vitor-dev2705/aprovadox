@@ -153,6 +153,8 @@ export default function Cronometro() {
   const pause = useStudyStore((s) => s.pause);
   const reset = useStudyStore((s) => s.reset);
   const setPomodoroPhase = useStudyStore((s) => s.setPomodoroPhase);
+  const totalWorkSeconds = useStudyStore((s) => s.totalWorkSeconds);
+  const getStudySeconds = useStudyStore((s) => s.getStudySeconds);
 
   // UI local
   const [modo, setModo] = useState("cronometro");
@@ -303,16 +305,19 @@ export default function Cronometro() {
   };
 
   const handleStop = async () => {
-    if (seconds < 30) {
+    // Usa apenas tempo de estudo real (exclui pausas do Pomodoro)
+    const studySecs = getStudySeconds();
+
+    if (studySecs < 30) {
       toast.error("Sessão muito curta. Estude pelo menos 30 segundos.");
       reset();
       return;
     }
     if (soundOn) playBeep();
 
-    const duracao = Math.floor(seconds / 60) || 1;
+    const duracao = Math.floor(studySecs / 60) || 1;
     const startISO =
-      startTime || new Date(Date.now() - seconds * 1000).toISOString();
+      startTime || new Date(Date.now() - studySecs * 1000).toISOString();
 
     try {
       const { data } = await sessaoService.create({
@@ -324,7 +329,10 @@ export default function Cronometro() {
         data_fim: new Date().toISOString(),
         notas: notes,
       });
-      toast.success(`✅ Sessão salva! +${data.xp_ganho || 0} XP`);
+      const breakInfo = selectedTecnica === "Pomodoro" && pomodoroCount > 0
+        ? ` (${pomodoroCount} pomodoro${pomodoroCount > 1 ? 's' : ''}, pausas não contabilizadas)`
+        : '';
+      toast.success(`✅ Sessão salva! +${data.xp_ganho || 0} XP${breakInfo}`);
       if (data.xp_ganho) updateUser({ xp: undefined });
     } catch {
       toast.error("Erro ao salvar sessão");
@@ -658,21 +666,36 @@ export default function Cronometro() {
           )}
 
           {selectedTecnica === "Pomodoro" && (
-            <div className="flex gap-2">
-              <Badge
-                variant={pomodoroPhase === "work" ? "primary" : "default"}
-                dot
-              >
-                Estudo
-              </Badge>
-              <Badge
-                variant={pomodoroPhase === "break" ? "success" : "default"}
-                dot
-              >
-                Pausa
-              </Badge>
-              {pomodoroCount > 0 && (
-                <Badge variant="orange">🍅 {pomodoroCount} pomodoros</Badge>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-2">
+                <Badge
+                  variant={pomodoroPhase === "work" ? "primary" : "default"}
+                  dot
+                >
+                  Estudo
+                </Badge>
+                <Badge
+                  variant={pomodoroPhase === "break" ? "success" : "default"}
+                  dot
+                >
+                  Pausa
+                </Badge>
+                {pomodoroCount > 0 && (
+                  <Badge variant="orange">🍅 {pomodoroCount}</Badge>
+                )}
+              </div>
+              {pomodoroPhase === "break" && (
+                <p className="text-xs text-accent-400 font-medium">
+                  ☕ Descansando — este tempo não será salvo como estudo
+                </p>
+              )}
+              {(pomodoroCount > 0 || pomodoroPhase === "break") && (
+                <p className="text-xs text-slate-500">
+                  Tempo de estudo acumulado:{" "}
+                  <span className="text-white font-bold">
+                    {formatTime(getStudySeconds())}
+                  </span>
+                </p>
               )}
             </div>
           )}
@@ -909,14 +932,27 @@ export default function Cronometro() {
 
           <div className="mt-auto p-4 rounded-xl bg-dark-600/50 space-y-2">
             <p className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-              <FiClock size={12} /> Tempo da sessão atual
+              <FiClock size={12} />
+              {selectedTecnica === "Pomodoro" && pomodoroPhase === "break"
+                ? "Pausa (não conta como estudo)"
+                : "Tempo da sessão atual"
+              }
             </p>
-            <p className="text-2xl font-black text-white tabular-nums">
+            <p className={`text-2xl font-black tabular-nums ${
+              selectedTecnica === "Pomodoro" && pomodoroPhase === "break"
+                ? "text-accent-400"
+                : "text-white"
+            }`}>
               {formatTime(seconds)}
             </p>
+            {selectedTecnica === "Pomodoro" && (totalWorkSeconds > 0 || pomodoroPhase === "break") && (
+              <p className="text-xs text-brand-400 font-medium">
+                📚 Estudo real: {formatTime(getStudySeconds())}
+              </p>
+            )}
             <p className="text-xs text-slate-500">
               {isRunning
-                ? "🟢 Rodando"
+                ? pomodoroPhase === "break" ? "☕ Descansando" : "🟢 Estudando"
                 : isPaused
                   ? "⏸️ Pausado"
                   : "⚪ Aguardando"}

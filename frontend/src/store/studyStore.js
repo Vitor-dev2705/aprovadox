@@ -30,6 +30,7 @@ export const useStudyStore = create(
 
       pomodoroPhase: 'work',
       pomodoroCount: 0,
+      totalWorkSeconds: 0,        // Acumula SOMENTE tempo de estudo (exclui pausas do Pomodoro)
 
       _intervalId: null,          // NÃO persistido
 
@@ -93,19 +94,24 @@ export const useStudyStore = create(
         get()._clearInterval()
         set({
           isRunning: false, isPaused: false, seconds: 0, startTime: null,
-          notes: '', pomodoroPhase: 'work', pomodoroCount: 0,
+          notes: '', pomodoroPhase: 'work', pomodoroCount: 0, totalWorkSeconds: 0,
           selectedConteudo: null, conteudoTitulo: null, conteudoTipo: null,
           selectedAssunto: null,
         })
       },
 
-      // Pomodoro
+      // Pomodoro — acumula tempo de work, descarta tempo de break
       setPomodoroPhase: (phase) => {
-        const { pomodoroCount } = get()
+        const { pomodoroCount, pomodoroPhase, seconds, totalWorkSeconds } = get()
         const newCount = phase === 'break' ? pomodoroCount + 1 : pomodoroCount
+        // Se estava em work → acumula os segundos estudados
+        const newWorkTotal = pomodoroPhase === 'work'
+          ? totalWorkSeconds + seconds
+          : totalWorkSeconds  // break → não acumula
         set({
           pomodoroPhase: phase,
           pomodoroCount: newCount,
+          totalWorkSeconds: newWorkTotal,
           seconds: 0,
           startTime: new Date().toISOString(),
         })
@@ -119,6 +125,14 @@ export const useStudyStore = create(
           set({ seconds: Math.max(0, elapsed) })
           get()._ensureInterval()
         }
+      },
+
+      // Retorna SOMENTE os segundos de estudo (exclui pausas Pomodoro)
+      getStudySeconds: () => {
+        const { totalWorkSeconds, seconds, pomodoroPhase, selectedTecnica } = get()
+        if (selectedTecnica !== 'Pomodoro') return seconds
+        // Em modo Pomodoro: acumulado + fase atual (se for work)
+        return totalWorkSeconds + (pomodoroPhase === 'work' ? seconds : 0)
       },
 
       getFormattedTime: () => {
@@ -148,6 +162,7 @@ export const useStudyStore = create(
         notes: state.notes,
         pomodoroPhase: state.pomodoroPhase,
         pomodoroCount: state.pomodoroCount,
+        totalWorkSeconds: state.totalWorkSeconds,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) setTimeout(() => state._hydrate?.(), 0)
