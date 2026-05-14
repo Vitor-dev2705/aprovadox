@@ -26,6 +26,7 @@ import { useAuthStore } from "../store/authStore";
 import Card from "../components/ui/Card";
 import Select from "../components/ui/Select";
 import Badge from "../components/ui/Badge";
+import Modal from "../components/ui/Modal";
 import PageHeader from "../components/ui/PageHeader";
 import toast from "react-hot-toast";
 
@@ -164,6 +165,14 @@ export default function Cronometro() {
   const lastBeepRef = useRef(0);
   const { updateUser } = useAuthStore();
 
+  // Modal de conclusão — pede o assunto antes de salvar
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [finishAssunto, setFinishAssunto] = useState("");
+  const [finishAssuntoId, setFinishAssuntoId] = useState(null);
+  const [assuntos, setAssuntos] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const pendingStopRef = useRef(null); // guarda dados da sessão enquanto o modal está aberto
+
   // Manual mode
   const [manualMateria, setManualMateria] = useState(null);
   const [manualMateriaName, setManualMateriaName] = useState(null);
@@ -176,6 +185,9 @@ export default function Cronometro() {
     new Date().toISOString().slice(0, 10),
   );
   const [manualNotas, setManualNotas] = useState("");
+  const [manualAssuntos, setManualAssuntos] = useState([]);
+  const [manualAssuntoId, setManualAssuntoId] = useState(null);
+  const [manualAssuntoNome, setManualAssuntoNome] = useState("");
   const [savingManual, setSavingManual] = useState(false);
 
   useEffect(() => {
@@ -184,9 +196,16 @@ export default function Cronometro() {
         .getByMateria(manualMateria)
         .then((r) => setManualConteudos(r.data || []))
         .catch(() => setManualConteudos([]));
+      materiaService
+        .getById(manualMateria)
+        .then((r) => setManualAssuntos(r.data?.assuntos || []))
+        .catch(() => setManualAssuntos([]));
     } else {
       setManualConteudos([]);
       setManualConteudo(null);
+      setManualAssuntos([]);
+      setManualAssuntoId(null);
+      setManualAssuntoNome("");
     }
   }, [manualMateria]);
 
@@ -206,9 +225,24 @@ export default function Cronometro() {
       const dataInicio = new Date(`${manualData}T12:00:00`);
       const dataFim = new Date(dataInicio.getTime() + totalMin * 60 * 1000);
 
+      // Se digitou assunto novo, cria primeiro
+      let assuntoId = manualAssuntoId;
+      if (!assuntoId && manualAssuntoNome.trim()) {
+        try {
+          const { data: novoAssunto } = await materiaService.addAssunto(
+            manualMateria,
+            { nome: manualAssuntoNome.trim() }
+          );
+          assuntoId = novoAssunto.id;
+        } catch {
+          // Se falhar, salva sem assunto
+        }
+      }
+
       const { data } = await sessaoService.create({
         materia_id: manualMateria,
         conteudo_id: manualConteudo || null,
+        assunto_id: assuntoId || null,
         tecnica: manualTecnica,
         duracao_minutos: totalMin,
         data_inicio: dataInicio.toISOString(),
@@ -221,6 +255,8 @@ export default function Cronometro() {
       setManualMinutos(30);
       setManualNotas("");
       setManualConteudo(null);
+      setManualAssuntoId(null);
+      setManualAssuntoNome("");
     } catch {
       toast.error("Erro ao registrar sessão");
     } finally {
@@ -234,6 +270,18 @@ export default function Cronometro() {
       .then((r) => setMaterias(r.data))
       .catch(() => setMaterias([]));
   }, []);
+
+  // Carrega assuntos da matéria selecionada (para o modal de conclusão)
+  useEffect(() => {
+    if (selectedMateria) {
+      materiaService
+        .getById(selectedMateria)
+        .then((r) => setAssuntos(r.data?.assuntos || []))
+        .catch(() => setAssuntos([]));
+    } else {
+      setAssuntos([]);
+    }
+  }, [selectedMateria]);
 
   useEffect(() => {
     if (selectedMateria) {
@@ -304,7 +352,7 @@ export default function Cronometro() {
     start();
   };
 
-  const handleStop = async () => {
+  const handleStop = () => {
     // Usa apenas tempo de estudo real (exclui pausas do Pomodoro)
     const studySecs = getStudySeconds();
 
@@ -314,30 +362,71 @@ export default function Cronometro() {
       return;
     }
     if (soundOn) playBeep();
+    pause(); // pausa o timer enquanto o modal está aberto
 
     const duracao = Math.floor(studySecs / 60) || 1;
     const startISO =
       startTime || new Date(Date.now() - studySecs * 1000).toISOString();
 
+    // Guarda os dados e abre o modal para o usuário informar o assunto
+    pendingStopRef.current = {
+      materia_id: selectedMateria,
+      conteudo_id: selectedConteudo || null,
+      tecnica: selectedTecnica,
+      duracao_minutos: duracao,
+      data_inicio: startISO,
+      data_fim: new Date().toISOString(),
+      notas: notes,
+    };
+    setFinishAssunto("");
+    setFinishAssuntoId(null);
+    setShowFinishModal(true);
+  };
+
+  const handleFinishSave = async () => {
+    if (!pendingStopRef.current) return;
+    setSaving(true);
+
     try {
+      // Se digitou um assunto novo, cria primeiro
+      let assuntoId = finishAssuntoId;
+      if (!assuntoId && finishAssunto.trim()) {
+        try {
+          const { data: novoAssunto } = await materiaService.addAssunto(
+            selectedMateria,
+            { nome: finishAssunto.trim() }
+          );
+          assuntoId = novoAssunto.id;
+        } catch {
+          // Se falhar ao criar o assunto, salva sem
+        }
+      }
+
       const { data } = await sessaoService.create({
-        materia_id: selectedMateria,
-        conteudo_id: selectedConteudo || null,
-        tecnica: selectedTecnica,
-        duracao_minutos: duracao,
-        data_inicio: startISO,
-        data_fim: new Date().toISOString(),
-        notas: notes,
+        ...pendingStopRef.current,
+        assunto_id: assuntoId || null,
+        notas: pendingStopRef.current.notas,
       });
       const breakInfo = selectedTecnica === "Pomodoro" && pomodoroCount > 0
         ? ` (${pomodoroCount} pomodoro${pomodoroCount > 1 ? 's' : ''}, pausas não contabilizadas)`
         : '';
-      toast.success(`✅ Sessão salva! +${data.xp_ganho || 0} XP${breakInfo}`);
+      toast.success(`Sessão salva! +${data.xp_ganho || 0} XP${breakInfo}`);
       if (data.xp_ganho) updateUser({ xp: undefined });
     } catch {
       toast.error("Erro ao salvar sessão");
     }
+
+    pendingStopRef.current = null;
+    setShowFinishModal(false);
+    setSaving(false);
     reset();
+  };
+
+  const handleFinishCancel = () => {
+    // Cancela — volta o timer ao estado pausado sem salvar
+    setShowFinishModal(false);
+    pendingStopRef.current = null;
+    // Mantém pausado para o usuário decidir se quer continuar
   };
 
   const pomodoroLimit =
@@ -483,6 +572,52 @@ export default function Cronometro() {
                 className="input-field text-sm"
               />
             </div>
+
+            {/* Assunto */}
+            {manualMateria && (
+              <div>
+                <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+                  Assunto estudado <span className="text-slate-500 text-xs">(opcional)</span>
+                </label>
+                {manualAssuntos.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {manualAssuntos.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => {
+                          if (manualAssuntoId === a.id) {
+                            setManualAssuntoId(null);
+                            setManualAssuntoNome('');
+                          } else {
+                            setManualAssuntoId(a.id);
+                            setManualAssuntoNome(a.nome);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                          manualAssuntoId === a.id
+                            ? 'bg-brand-500/20 border border-brand-500/40 text-brand-400'
+                            : 'border border-white/10 text-slate-400 hover:border-white/20 hover:text-white'
+                        }`}
+                      >
+                        {a.nome}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  value={manualAssuntoId ? '' : manualAssuntoNome}
+                  onChange={(e) => {
+                    setManualAssuntoNome(e.target.value);
+                    setManualAssuntoId(null);
+                  }}
+                  placeholder={manualAssuntos.length > 0 ? 'Ou digite um novo assunto...' : 'Ex: Princípios Fundamentais...'}
+                  className="input-field text-sm w-full"
+                  disabled={!!manualAssuntoId}
+                />
+              </div>
+            )}
 
             {/* Notas */}
             <textarea
@@ -961,6 +1096,131 @@ export default function Cronometro() {
         </Card>
       </div>
       )}
+
+      {/* ==================== MODAL DE CONCLUSÃO ==================== */}
+      <Modal isOpen={showFinishModal} onClose={handleFinishCancel} title="📝 Finalizar Sessão">
+        <div className="space-y-5">
+          {/* Resumo da sessão */}
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-dark-600/50 border border-white/5">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: (materiaCor || '#6366f1') + '20', border: `1px solid ${materiaCor || '#6366f1'}40` }}
+            >
+              <FiBook size={20} style={{ color: materiaCor || '#6366f1' }} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-white truncate">{materiaName}</p>
+              <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                <span className="flex items-center gap-1">
+                  <FiClock size={11} />
+                  {pendingStopRef.current
+                    ? pendingStopRef.current.duracao_minutos >= 60
+                      ? `${Math.floor(pendingStopRef.current.duracao_minutos / 60)}h${pendingStopRef.current.duracao_minutos % 60 > 0 ? pendingStopRef.current.duracao_minutos % 60 + 'min' : ''}`
+                      : `${pendingStopRef.current.duracao_minutos}min`
+                    : ''}
+                </span>
+                {selectedTecnica && <span>• {selectedTecnica}</span>}
+                {selectedTecnica === 'Pomodoro' && pomodoroCount > 0 && (
+                  <span>• 🍅 {pomodoroCount}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Seleção de assunto */}
+          <div>
+            <label className="text-sm font-medium text-slate-300 mb-2 block">
+              O que você estudou? <span className="text-slate-500 text-xs">(opcional, ajuda nas revisões)</span>
+            </label>
+
+            {/* Chips dos assuntos existentes */}
+            {assuntos.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-slate-500 mb-2">Assuntos desta matéria:</p>
+                <div className="flex flex-wrap gap-2">
+                  {assuntos.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => {
+                        if (finishAssuntoId === a.id) {
+                          setFinishAssuntoId(null);
+                          setFinishAssunto('');
+                        } else {
+                          setFinishAssuntoId(a.id);
+                          setFinishAssunto(a.nome);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        finishAssuntoId === a.id
+                          ? 'bg-brand-500/20 border border-brand-500/40 text-brand-400'
+                          : 'border border-white/10 text-slate-400 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      {a.nome}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Input novo assunto */}
+            <div>
+              <p className="text-xs text-slate-500 mb-1.5">
+                {assuntos.length > 0 ? 'Ou digite um novo assunto:' : 'Digite o assunto estudado:'}
+              </p>
+              <input
+                type="text"
+                value={finishAssuntoId ? '' : finishAssunto}
+                onChange={(e) => {
+                  setFinishAssunto(e.target.value);
+                  setFinishAssuntoId(null);
+                }}
+                placeholder="Ex: Princípios Fundamentais, Art. 5º CF..."
+                className="input-field text-sm w-full"
+                disabled={!!finishAssuntoId}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Notas (permite editar antes de salvar) */}
+          <div>
+            <label className="text-sm font-medium text-slate-300 mb-1.5 block">
+              Anotações <span className="text-slate-500 text-xs">(opcional)</span>
+            </label>
+            <textarea
+              value={pendingStopRef.current?.notas || ''}
+              onChange={(e) => {
+                if (pendingStopRef.current) pendingStopRef.current.notas = e.target.value;
+              }}
+              placeholder="Anotações sobre esta sessão..."
+              className="w-full input-field text-sm resize-none h-16"
+            />
+          </div>
+
+          {/* Botões */}
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={handleFinishCancel}
+              className="flex-1 py-3 rounded-xl border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-all text-sm font-semibold"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleFinishSave}
+              disabled={saving}
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-accent-500 text-white font-bold text-sm shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {saving ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><FiSave size={16} /> Salvar Sessão</>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

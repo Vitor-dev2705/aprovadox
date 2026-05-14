@@ -62,8 +62,17 @@ export default function Motivacional() {
       .catch(() => {});
   }, []);
 
-  const totalHoras = Math.round(((stats?.mes_minutos || 0) / 60) * 10) / 10;
-  const totalSemana = Math.round(((stats?.semana_minutos || 0) / 60) * 10) / 10;
+  const formatarTempo = (minutos) => {
+    if (!minutos || minutos <= 0) return '0min';
+    const h = Math.floor(minutos / 60);
+    const m = Math.round(minutos % 60);
+    if (h === 0) return `${m}min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h${m}min`;
+  };
+
+  const totalMes = formatarTempo(stats?.mes_minutos || 0);
+  const totalSemana = formatarTempo(stats?.semana_minutos || 0);
   const streak = user?.streak || stats?.streak || 0;
   const xp = user?.xp || 0;
 
@@ -121,7 +130,7 @@ export default function Motivacional() {
           },
           {
             icon: "📅",
-            value: `${totalSemana}h`,
+            value: totalSemana,
             label: "Esta semana",
             color: "text-accent-400",
           },
