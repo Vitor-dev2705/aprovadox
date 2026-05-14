@@ -51,13 +51,13 @@ function StatCard({ icon: Icon, label, value, sub, color = 'brand', onClick, del
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
-  const totalMin = Math.round((payload[0]?.value || 0) * 60)
-  const h = Math.floor(totalMin / 60)
-  const m = totalMin % 60
-  const texto = h > 0 ? (m > 0 ? `${h}h${m}min` : `${h}h`) : `${m}min`
+  const minutos = parseInt(payload[0]?.value) || 0
+  const h = Math.floor(minutos / 60)
+  const m = minutos % 60
+  const texto = minutos <= 0 ? '0min' : h > 0 ? (m > 0 ? `${h}h${m}min` : `${h}h`) : `${m}min`
   return (
     <div className="bg-dark-600 border border-white/10 rounded-xl px-4 py-3 text-sm shadow-xl">
-      <p className="text-slate-400 mb-1 text-xs">{DIAS[label] || label}</p>
+      <p className="text-slate-400 mb-1 text-xs">{label}</p>
       <p className="text-white font-bold">{texto} estudados</p>
     </div>
   )
@@ -96,7 +96,7 @@ export default function Dashboard() {
   const todayDow = new Date().getDay()
   const chartData = DIAS.map((dia, i) => {
     const found = d.grafico_semana?.find(g => parseInt(g.dia) === i)
-    return { dia, horas: found ? (parseInt(found.min) / 60) : 0, isToday: i === todayDow }
+    return { dia, minutos: found ? parseInt(found.min) : 0, isToday: i === todayDow }
   })
 
   const metaMinutos = d.meta_diaria?.valor_alvo ? d.meta_diaria.valor_alvo * 60 : 120
@@ -162,7 +162,7 @@ export default function Dashboard() {
               <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} />
               <YAxis hide />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
-              <Bar dataKey="horas" radius={[8,8,0,0]}>
+              <Bar dataKey="minutos" radius={[8,8,0,0]}>
                 {chartData.map((entry, i) => (
                   <Cell key={i} fill={entry.isToday ? '#6366f1' : '#1a1a27'} />
                 ))}

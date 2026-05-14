@@ -78,18 +78,37 @@ exports.getEstatisticas = async (req, res) => {
   try {
     const userId = req.userId;
 
-    const [porMateria, porDia, porHora, evolucaoMensal, metasCumpridas, porTecnica] = await Promise.all([
+    const [
+      todayRes, weekRes, monthRes, totalRes,
+      porMateria, porDiaSemana, porDia30d, porHora,
+      evolucaoMensal, metasCumpridas, porTecnica, totalSessoes
+    ] = await Promise.all([
+      // Totais de tempo
+      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio::date=CURRENT_DATE", [userId]),
+      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('week',CURRENT_DATE)", [userId]),
+      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('month',CURRENT_DATE)", [userId]),
+      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1", [userId]),
+      // Distribuições
       pool.query(`SELECT m.nome, m.cor, SUM(s.duracao_minutos) as minutos FROM sessoes_estudo s JOIN materias m ON s.materia_id=m.id WHERE s.user_id=$1 GROUP BY m.nome, m.cor ORDER BY minutos DESC`, [userId]),
+      pool.query(`SELECT EXTRACT(DOW FROM data_inicio) as dia, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('week',CURRENT_DATE) GROUP BY dia ORDER BY dia`, [userId]),
       pool.query(`SELECT EXTRACT(DOW FROM data_inicio) as dia, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=CURRENT_DATE-30 GROUP BY dia ORDER BY dia`, [userId]),
       pool.query(`SELECT EXTRACT(HOUR FROM data_inicio) as hora, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 GROUP BY hora ORDER BY hora`, [userId]),
+      // Evolução e metas
       pool.query(`SELECT DATE_TRUNC('month', data_inicio) as mes, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 GROUP BY mes ORDER BY mes DESC LIMIT 12`, [userId]),
       pool.query(`SELECT COUNT(*) FILTER (WHERE concluida) as cumpridas, COUNT(*) as total FROM metas WHERE user_id=$1`, [userId]),
-      pool.query(`SELECT tecnica, SUM(duracao_minutos) as minutos, COUNT(*) as sessoes FROM sessoes_estudo WHERE user_id=$1 AND tecnica IS NOT NULL GROUP BY tecnica ORDER BY minutos DESC`, [userId])
+      pool.query(`SELECT tecnica, SUM(duracao_minutos) as minutos, COUNT(*) as sessoes FROM sessoes_estudo WHERE user_id=$1 AND tecnica IS NOT NULL GROUP BY tecnica ORDER BY minutos DESC`, [userId]),
+      pool.query(`SELECT COUNT(*) as total FROM sessoes_estudo WHERE user_id=$1`, [userId])
     ]);
 
     res.json({
+      hoje_minutos: parseInt(todayRes.rows[0].min),
+      semana_minutos: parseInt(weekRes.rows[0].min),
+      mes_minutos: parseInt(monthRes.rows[0].min),
+      total_minutos: parseInt(totalRes.rows[0].min),
+      total_sessoes: parseInt(totalSessoes.rows[0].total),
       por_materia: porMateria.rows,
-      por_dia: porDia.rows,
+      por_dia_semana: porDiaSemana.rows,
+      por_dia_30d: porDia30d.rows,
       por_hora: porHora.rows,
       evolucao_mensal: evolucaoMensal.rows,
       metas: metasCumpridas.rows[0],

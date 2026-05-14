@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     <div className="bg-dark-600 border border-white/10 rounded-xl px-4 py-3 text-sm shadow-xl">
       <p className="text-slate-400 text-xs mb-1">{label}</p>
       {payload.map((p, i) => {
-        const val = parseFloat(p.value) || 0
+        const val = parseInt(p.value) || 0
         return <p key={i} className="font-bold" style={{ color: p.color }}>{formatarTempo(val)}</p>
       })}
     </div>
@@ -48,7 +48,7 @@ function StatMini({ label, value, color }) {
   return (
     <Card className="p-4 text-center">
       <p className={`text-xl font-black ${color} mb-1`}>{value}</p>
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-[11px] text-slate-500 font-medium">{label}</p>
     </Card>
   )
 }
@@ -68,22 +68,39 @@ export default function Estatisticas() {
   if (loading) return <Loader text="Carregando estatísticas..." />
   const d = stats || MOCK_STATS
 
+  // Tempos diretos do backend (já em minutos inteiros)
+  const hojeMin = d.hoje_minutos || 0
+  const semanaMin = d.semana_minutos || 0
+  const mesMin = d.mes_minutos || 0
+  const totalMin = d.total_minutos || 0
+  const totalSessoes = d.total_sessoes || 0
+
   const materiaChart = (d.por_materia || []).map(m => ({
-    name: m.nome, minutos: parseInt(m.minutos) || 0, label: formatarTempo(m.minutos)
+    name: m.nome, minutos: parseInt(m.minutos) || 0
   }))
-  const diaChart = DIAS.map((dia, i) => {
-    const f = (d.por_dia || []).find(d => parseInt(d.dia) === i)
+
+  // Gráfico semanal — usa por_dia_semana (semana atual) para consistência com Dashboard
+  const semanaChart = DIAS.map((dia, i) => {
+    const f = (d.por_dia_semana || []).find(x => parseInt(x.dia) === i)
     return { dia, minutos: f ? parseInt(f.minutos) : 0 }
   })
+
+  // Gráfico 30 dias — usa por_dia_30d
+  const dia30Chart = DIAS.map((dia, i) => {
+    const f = (d.por_dia_30d || d.por_dia || []).find(x => parseInt(x.dia) === i)
+    return { dia, minutos: f ? parseInt(f.minutos) : 0 }
+  })
+
+  // Evolução mensal — FIX: usa getUTCMonth() para evitar bug de timezone
   const mesChart = (d.evolucao_mensal || []).slice(0, 6).reverse().map(m => ({
-    mes: MESES[new Date(m.mes).getMonth()], minutos: parseInt(m.minutos) || 0
+    mes: MESES[new Date(m.mes).getUTCMonth()],
+    minutos: parseInt(m.minutos) || 0
   }))
+
   const horaChart = Array.from({ length: 24 }, (_, h) => {
     const f = (d.por_hora || []).find(x => parseInt(x.hora) === h)
     return { hora: `${String(h).padStart(2,'0')}h`, minutos: f ? parseInt(f.minutos) : 0 }
   }).filter(h => h.minutos > 0)
-
-  const totalMinutos = materiaChart.reduce((sum, m) => sum + m.minutos, 0)
 
   const tabs = [
     { id:'visao-geral', label:'Visão Geral', icon: FiBarChart2 },
@@ -98,8 +115,16 @@ export default function Estatisticas() {
         emoji="📊"
         title="Estatísticas"
         subtitle="Análise completa do seu desempenho"
-        badge={totalMinutos > 0 ? formatarTempo(totalMinutos) + ' total' : 'Comece a estudar'}
+        badge={totalSessoes > 0 ? `${totalSessoes} sessões` : 'Comece a estudar'}
       />
+
+      {/* Resumo de tempo — números reais do backend */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatMini label="Hoje" value={formatarTempo(hojeMin)} color="text-brand-400" />
+        <StatMini label="Esta semana" value={formatarTempo(semanaMin)} color="text-accent-400" />
+        <StatMini label="Este mês" value={formatarTempo(mesMin)} color="text-purple-400" />
+        <StatMini label="Total" value={formatarTempo(totalMin)} color="text-yellow-400" />
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
@@ -113,13 +138,8 @@ export default function Estatisticas() {
 
       {activeTab === 'visao-geral' && (
         <div className="space-y-4">
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatMini
-              label="Total estudado"
-              value={formatarTempo(totalMinutos)}
-              color="text-brand-400"
-            />
+          {/* Info cards */}
+          <div className="grid grid-cols-3 gap-3">
             <StatMini
               label="Metas cumpridas"
               value={`${d.metas?.cumpridas || 0}/${d.metas?.total || 0}`}
@@ -132,7 +152,7 @@ export default function Estatisticas() {
             />
             <StatMini
               label="Dia mais produtivo"
-              value={getDiaMaisProdutivo(diaChart)}
+              value={getDiaMaisProdutivo(dia30Chart)}
               color="text-yellow-400"
             />
           </div>
@@ -145,7 +165,7 @@ export default function Estatisticas() {
               </h3>
               <div className="space-y-3">
                 {d.por_tecnica.map((t, i) => {
-                  const pct = totalMinutos > 0 ? (parseInt(t.minutos) / totalMinutos * 100) : 0
+                  const pct = totalMin > 0 ? (parseInt(t.minutos) / totalMin * 100) : 0
                   return (
                     <div key={t.tecnica}>
                       <div className="flex items-center justify-between mb-1.5">
@@ -170,17 +190,18 @@ export default function Estatisticas() {
             </Card>
           )}
 
-          {/* Days chart */}
+          {/* Weekly chart — semana atual (mesma fonte do Dashboard) */}
           <Card className="p-5">
-            <h3 className="font-bold text-white mb-4">Distribuição Semanal</h3>
-            {diaChart.some(d => d.minutos > 0) ? (
+            <h3 className="font-bold text-white mb-1">Esta Semana</h3>
+            <p className="text-xs text-slate-500 mb-4">{formatarTempo(semanaMin)} estudados</p>
+            {semanaChart.some(d => d.minutos > 0) ? (
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={diaChart} barSize={32}>
+                <BarChart data={semanaChart} barSize={32}>
                   <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:12 }} />
                   <YAxis hide />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(99,102,241,0.08)' }} />
                   <Bar dataKey="minutos" name="Minutos" fill="#6366f1" radius={[6,6,0,0]}>
-                    {diaChart.map((entry, i) => (
+                    {semanaChart.map((entry, i) => (
                       <Cell key={i} fill={entry.dia === DIAS[new Date().getDay()] ? '#6366f1' : '#1e1e2e'} />
                     ))}
                   </Bar>
@@ -189,6 +210,26 @@ export default function Estatisticas() {
             ) : (
               <div className="text-center py-12 text-slate-500">
                 <FiBarChart2 size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Sem dados nesta semana ainda</p>
+              </div>
+            )}
+          </Card>
+
+          {/* 30-day chart */}
+          <Card className="p-5">
+            <h3 className="font-bold text-white mb-1">Distribuição por Dia (últimos 30 dias)</h3>
+            <p className="text-xs text-slate-500 mb-4">Soma dos minutos estudados em cada dia da semana</p>
+            {dia30Chart.some(d => d.minutos > 0) ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={dia30Chart} barSize={28}>
+                  <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:12 }} />
+                  <YAxis hide />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(99,102,241,0.08)' }} />
+                  <Bar dataKey="minutos" name="Minutos" fill="#10b981" radius={[6,6,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
                 <p className="text-sm">Sem dados dos últimos 30 dias</p>
               </div>
             )}
@@ -238,7 +279,7 @@ export default function Estatisticas() {
               <h3 className="font-bold text-white mb-4">Detalhamento</h3>
               <div className="space-y-3">
                 {materiaChart.map((m, i) => {
-                  const pct = totalMinutos > 0 ? (m.minutos / totalMinutos * 100) : 0
+                  const pct = totalMin > 0 ? (m.minutos / totalMin * 100) : 0
                   return (
                     <div key={m.name} className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
@@ -305,7 +346,6 @@ export default function Estatisticas() {
                   <Bar dataKey="minutos" name="Minutos" fill="#6366f1" radius={[4,4,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
-              {/* Best hour highlight */}
               {(() => {
                 const melhor = horaChart.reduce((a, b) => b.minutos > a.minutos ? b : a, horaChart[0])
                 return (
@@ -333,13 +373,21 @@ export default function Estatisticas() {
 }
 
 const MOCK_STATS = {
+  hoje_minutos: 90,
+  semana_minutos: 600,
+  mes_minutos: 2400,
+  total_minutos: 3180,
+  total_sessoes: 42,
   por_materia: [
     { nome:'Direito Constitucional', cor:'#6366f1', minutos:1200 },
     { nome:'Português', cor:'#10b981', minutos:900 },
     { nome:'Raciocínio Lógico', cor:'#f59e0b', minutos:600 },
     { nome:'Informática', cor:'#3b82f6', minutos:480 },
   ],
-  por_dia: [
+  por_dia_semana: [
+    {dia:1,minutos:60},{dia:2,minutos:90},{dia:3,minutos:45},
+  ],
+  por_dia_30d: [
     {dia:1,minutos:120},{dia:2,minutos:180},{dia:3,minutos:90},
     {dia:4,minutos:210},{dia:5,minutos:150},{dia:6,minutos:240},
   ],
