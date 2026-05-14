@@ -342,6 +342,25 @@ export default function Cronometro() {
 
   const canStart = !!selectedMateria;
 
+  // Troca de conteúdo — se durante Pomodoro work, finaliza o bloco e inicia pausa
+  const handleConteudoChange = (id, titulo, tipo) => {
+    const prevId = selectedConteudo;
+    setConteudo(id, titulo, tipo);
+
+    // Só dispara se realmente trocou para um NOVO conteúdo durante trabalho ativo
+    if (
+      selectedTecnica === 'Pomodoro' &&
+      pomodoroPhase === 'work' &&
+      isRunning &&
+      id != null &&
+      String(id) !== String(prevId)
+    ) {
+      if (soundOn) playBeep();
+      toast.success('🍅 Bloco finalizado! Descanse 5 min antes da próxima aula.', { duration: 4000 });
+      setPomodoroPhase('break');
+    }
+  };
+
   const handleStart = () => {
     if (!canStart) {
       toast.error("Selecione uma matéria antes de iniciar! 📚", {
@@ -940,12 +959,16 @@ export default function Cronometro() {
             )}
           </div>
 
-          {/* CONTEÚDO da matéria — NOVO */}
+          {/* CONTEÚDO da matéria — pode trocar durante Pomodoro */}
           {selectedMateria && (
             <div>
               <label className="text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-2">
                 Conteúdo
-                <span className="text-slate-500 text-xs">(opcional)</span>
+                <span className="text-slate-500 text-xs">
+                  {isRunning && selectedTecnica === 'Pomodoro' && pomodoroPhase === 'work'
+                    ? '(trocar = finaliza bloco)'
+                    : '(opcional)'}
+                </span>
               </label>
 
               {conteudos.length === 0 ? (
@@ -959,13 +982,12 @@ export default function Cronometro() {
                 <select
                   className="input-field text-sm"
                   value={selectedConteudo || ""}
-                  disabled={isRunning || isPaused}
                   onChange={(e) => {
                     const id = e.target.value;
                     const c = conteudos.find(
                       (x) => String(x.id) === String(id),
                     );
-                    setConteudo(
+                    handleConteudoChange(
                       id ? Number(id) : null,
                       c?.titulo || null,
                       c?.tipo || null,
@@ -984,10 +1006,10 @@ export default function Cronometro() {
                 </select>
               )}
 
-              {/* Chips visuais dos conteúdos */}
-              {conteudos.length > 0 && !isRunning && !isPaused && (
+              {/* Chips visuais dos conteúdos — sempre visíveis para trocar de aula rápido */}
+              {conteudos.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {conteudos.slice(0, 6).map((c) => {
+                  {conteudos.slice(0, 8).map((c) => {
                     const Icon = TIPO_ICON[c.tipo] || FiEdit;
                     const cor = TIPO_COR[c.tipo] || "#64748b";
                     const active = String(selectedConteudo) === String(c.id);
@@ -996,7 +1018,7 @@ export default function Cronometro() {
                         key={c.id}
                         type="button"
                         onClick={() =>
-                          setConteudo(
+                          handleConteudoChange(
                             active ? null : Number(c.id),
                             active ? null : c.titulo,
                             active ? null : c.tipo,
