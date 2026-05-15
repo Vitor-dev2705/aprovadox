@@ -21,6 +21,7 @@ import {
 import { sessaoService } from "../services/sessao.service";
 import { materiaService } from "../services/materia.service";
 import { conteudoService } from "../services/conteudo.service";
+import { revisaoService } from "../services/revisao.service";
 import { useStudyStore } from "../store/studyStore";
 import { useAuthStore } from "../store/authStore";
 import Card from "../components/ui/Card";
@@ -174,6 +175,7 @@ export default function Cronometro() {
   const [assuntos, setAssuntos] = useState([]);
   const [saving, setSaving] = useState(false);
   const pendingStopRef = useRef(null); // guarda dados da sessão enquanto o modal está aberto
+  const [revisoesPendentes, setRevisoesPendentes] = useState([]);
 
   // Manual mode
   const [manualMateria, setManualMateria] = useState(null);
@@ -272,6 +274,22 @@ export default function Cronometro() {
       .then((r) => setMaterias(r.data))
       .catch(() => setMaterias([]));
   }, []);
+
+  // Carrega revisões pendentes quando técnica é "Revisão Espaçada"
+  useEffect(() => {
+    if (selectedTecnica === 'Revisão Espaçada' && selectedMateria) {
+      revisaoService.getToday()
+        .then((r) => {
+          const daMateria = (r.data || []).filter(
+            (rev) => rev.materia_id === selectedMateria && !rev.concluida
+          );
+          setRevisoesPendentes(daMateria);
+        })
+        .catch(() => setRevisoesPendentes([]));
+    } else {
+      setRevisoesPendentes([]);
+    }
+  }, [selectedTecnica, selectedMateria]);
 
   // Carrega assuntos da matéria selecionada (para o modal de conclusão)
   useEffect(() => {
@@ -449,7 +467,10 @@ export default function Cronometro() {
       const blocosInfo = pomodoroCount > 0
         ? ` (+ ${pomodoroCount} bloco${pomodoroCount > 1 ? 's' : ''} Pomodoro já salvos)`
         : '';
-      toast.success(`Sessão salva! +${data.xp_ganho || 0} XP${blocosInfo}`);
+      const revInfo = data.revisoes_concluidas > 0
+        ? ` ✅ ${data.revisoes_concluidas} revisão(ões) concluída(s)!`
+        : '';
+      toast.success(`Sessão salva! +${data.xp_ganho || 0} XP${blocosInfo}${revInfo}`);
       if (data.xp_ganho) updateUser({ xp: undefined });
     } catch {
       toast.error("Erro ao salvar sessão");
@@ -1110,6 +1131,59 @@ export default function Cronometro() {
             </div>
           )}
 
+          {/* Revisões pendentes — quando técnica é Revisão Espaçada */}
+          {selectedTecnica === 'Revisão Espaçada' && selectedMateria && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+              <p className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+                <FiCalendar size={12} /> Revisões pendentes
+                {revisoesPendentes.length > 0 && (
+                  <span className="ml-auto bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
+                    {revisoesPendentes.length}
+                  </span>
+                )}
+              </p>
+              {revisoesPendentes.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  Nenhuma revisão pendente para esta matéria hoje.
+                </p>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
+                  {revisoesPendentes.map((rev) => {
+                    const tipoCor = {
+                      '24h': '#ef4444',
+                      '7d': '#f59e0b',
+                      '30d': '#3b82f6',
+                      '90d': '#8b5cf6',
+                    };
+                    return (
+                      <div
+                        key={rev.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-dark-700/50 border border-white/5"
+                      >
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0"
+                          style={{
+                            backgroundColor: (tipoCor[rev.tipo] || '#6366f1') + '20',
+                            color: tipoCor[rev.tipo] || '#6366f1',
+                            border: `1px solid ${tipoCor[rev.tipo] || '#6366f1'}40`,
+                          }}
+                        >
+                          {rev.tipo}
+                        </span>
+                        <span className="text-xs text-slate-300 truncate">
+                          {rev.conteudo_titulo || rev.assunto_nome || rev.materia_nome || 'Conteúdo'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-[10px] text-slate-500 pt-1">
+                Ao finalizar, essas revisões serão marcadas como concluídas automaticamente.
+              </p>
+            </div>
+          )}
+
           <div className="mt-auto p-4 rounded-xl bg-dark-600/50 space-y-2">
             <p className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
               <FiClock size={12} />
@@ -1171,6 +1245,41 @@ export default function Cronometro() {
               </div>
             </div>
           </div>
+
+          {/* Revisões que serão concluídas (Revisão Espaçada) */}
+          {selectedTecnica === 'Revisão Espaçada' && revisoesPendentes.length > 0 && (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+              <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                <FiCalendar size={12} /> Revisões que serão concluídas
+                <span className="ml-auto bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
+                  {revisoesPendentes.length}
+                </span>
+              </p>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
+                {revisoesPendentes.map((rev) => {
+                  const tipoCor = { '24h': '#ef4444', '7d': '#f59e0b', '30d': '#3b82f6', '90d': '#8b5cf6' };
+                  return (
+                    <div key={rev.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-dark-700/50 border border-white/5">
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0"
+                        style={{
+                          backgroundColor: (tipoCor[rev.tipo] || '#6366f1') + '20',
+                          color: tipoCor[rev.tipo] || '#6366f1',
+                          border: `1px solid ${tipoCor[rev.tipo] || '#6366f1'}40`,
+                        }}
+                      >
+                        {rev.tipo}
+                      </span>
+                      <span className="text-xs text-slate-300 truncate">
+                        {rev.conteudo_titulo || rev.assunto_nome || 'Conteúdo geral'}
+                      </span>
+                      <span className="ml-auto text-emerald-400 text-xs">✓</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Seleção de assunto */}
           <div>
@@ -1260,7 +1369,7 @@ export default function Cronometro() {
               {saving ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <><FiSave size={16} /> Salvar Sessão</>
+                <><FiSave size={16} /> {selectedTecnica === 'Revisão Espaçada' && revisoesPendentes.length > 0 ? 'Salvar e Concluir Revisões' : 'Salvar Sessão'}</>
               )}
             </button>
           </div>

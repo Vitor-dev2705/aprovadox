@@ -66,19 +66,44 @@ exports.create = async (req, res) => {
       [xp, req.userId]
     );
 
-    // Agendar revisões espaçadas (24h, 7d, 30d, 90d)
-    // Funciona com ou sem conteúdo — se só a matéria foi selecionada, agenda revisão da matéria
-    const intervalDays = [1, 7, 30, 90];
-    const tipos = ['24h', '7d', '30d', '90d'];
-    for (let i = 0; i < intervalDays.length; i++) {
-      await pool.query(
-        `INSERT INTO revisoes (user_id, materia_id, conteudo_id, assunto_id, sessao_id, tipo, data_revisao)
-         VALUES ($1, $2, $3, $4, $5, $6, ${TODAY_BR} + $7::int)`,
-        [req.userId, materia_id, conteudo_id || null, assunto_id || null, sessao.id, tipos[i], intervalDays[i]]
+    // Se técnica é "Revisão Espaçada" → dá check nas revisões pendentes desta matéria
+    // Caso contrário → agenda novas revisões espaçadas normalmente
+    let revisoes_concluidas = 0;
+
+    if (tecnica === 'Revisão Espaçada') {
+      // Completa revisões pendentes (vencidas ou de hoje) para esta matéria
+      const completar = await pool.query(
+        `UPDATE revisoes SET concluida = true
+         WHERE user_id = $1 AND materia_id = $2
+           AND concluida = false AND data_revisao <= ${TODAY_BR}
+         RETURNING id`,
+        [req.userId, materia_id]
       );
+      revisoes_concluidas = completar.rowCount;
+
+      // +5 XP por revisão concluída (mesmo que o complete individual faz)
+      if (revisoes_concluidas > 0) {
+        const xpRevisoes = revisoes_concluidas * 5;
+        await pool.query('UPDATE users SET xp = xp + $1 WHERE id = $2', [xpRevisoes, req.userId]);
+        await pool.query(
+          "INSERT INTO gamificacao_log (user_id, tipo, descricao, xp_ganho) VALUES ($1, 'revisao', $2, $3)",
+          [req.userId, `Revisão concluída de ${revisoes_concluidas} item(ns) via cronômetro`, xpRevisoes]
+        );
+      }
+    } else {
+      // Agendar revisões espaçadas (24h, 7d, 30d, 90d)
+      const intervalDays = [1, 7, 30, 90];
+      const tipos = ['24h', '7d', '30d', '90d'];
+      for (let i = 0; i < intervalDays.length; i++) {
+        await pool.query(
+          `INSERT INTO revisoes (user_id, materia_id, conteudo_id, assunto_id, sessao_id, tipo, data_revisao)
+           VALUES ($1, $2, $3, $4, $5, $6, ${TODAY_BR} + $7::int)`,
+          [req.userId, materia_id, conteudo_id || null, assunto_id || null, sessao.id, tipos[i], intervalDays[i]]
+        );
+      }
     }
 
-    res.status(201).json({ ...sessao, xp_ganho: xp });
+    res.status(201).json({ ...sessao, xp_ganho: xp, revisoes_concluidas });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao registrar sessão' });
