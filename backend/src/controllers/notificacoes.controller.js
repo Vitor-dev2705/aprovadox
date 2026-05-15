@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+const TZ = 'America/Sao_Paulo';
+const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
+
 /**
  * Gera notificações dinâmicas baseadas no estado real do usuário:
  * - Revisões pendentes (24h, 7d, 30d, 90d)
@@ -22,7 +25,7 @@ exports.getAll = async (req, res) => {
       FROM revisoes r
       LEFT JOIN materias m ON r.materia_id = m.id
       LEFT JOIN conteudos c ON r.conteudo_id = c.id
-      WHERE r.user_id = $1 AND r.data_revisao <= CURRENT_DATE AND r.concluida = false
+      WHERE r.user_id = $1 AND r.data_revisao <= ${TODAY_BR} AND r.concluida = false
       ORDER BY r.data_revisao ASC
       LIMIT 5
     `, [userId]);
@@ -44,11 +47,11 @@ exports.getAll = async (req, res) => {
 
     // 2) CONCURSOS PRÓXIMOS (≤ 30 dias)
     const concursos = await pool.query(`
-      SELECT id, nome, data_prova, (data_prova - CURRENT_DATE) as dias
+      SELECT id, nome, data_prova, (data_prova - ${TODAY_BR}) as dias
       FROM concursos
       WHERE user_id = $1 AND data_prova IS NOT NULL
-        AND data_prova >= CURRENT_DATE
-        AND data_prova <= CURRENT_DATE + INTERVAL '30 days'
+        AND data_prova >= ${TODAY_BR}
+        AND data_prova <= ${TODAY_BR} + INTERVAL '30 days'
       ORDER BY data_prova ASC
       LIMIT 3
     `, [userId]);
@@ -96,7 +99,7 @@ exports.getAll = async (req, res) => {
     const todayMin = await pool.query(
       `SELECT COALESCE(SUM(duracao_minutos), 0)::int as min
        FROM sessoes_estudo
-       WHERE user_id = $1 AND data_inicio::date = CURRENT_DATE`,
+       WHERE user_id = $1 AND (data_inicio AT TIME ZONE '${TZ}')::date = ${TODAY_BR}`,
       [userId]
     );
     const minHoje = todayMin.rows[0].min;

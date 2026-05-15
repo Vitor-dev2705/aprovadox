@@ -1,5 +1,13 @@
 const pool = require('../config/database');
 
+// Timezone do Brasil — todas as queries de data usam isso
+// para que "hoje", "esta semana", "este mês" reflitam o horário local do usuário
+const TZ = 'America/Sao_Paulo';
+const TODAY     = `(NOW() AT TIME ZONE '${TZ}')::date`;
+const DATA_LOCAL = `(data_inicio AT TIME ZONE '${TZ}')`;
+const WEEK_START = `DATE_TRUNC('week', ${TODAY})`;
+const MONTH_START = `DATE_TRUNC('month', ${TODAY})`;
+
 const frases = [
   "A disciplina é a ponte entre metas e conquistas.",
   "Cada hora de estudo te aproxima da aprovação.",
@@ -39,20 +47,20 @@ exports.getDashboard = async (req, res) => {
 
     const [userRes, todayRes, weekRes, monthRes, streakRes, reviewsRes, topMateriaRes, weeklyChartRes] = await Promise.all([
       pool.query('SELECT name, xp, level, streak FROM users WHERE id = $1', [userId]),
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio::date=CURRENT_DATE", [userId]),
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('week',CURRENT_DATE)", [userId]),
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('month',CURRENT_DATE)", [userId]),
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL}::date = ${TODAY}`, [userId]),
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${WEEK_START}`, [userId]),
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${MONTH_START}`, [userId]),
       pool.query('SELECT streak, last_study_date FROM users WHERE id=$1', [userId]),
-      pool.query("SELECT COUNT(*) as total FROM revisoes WHERE user_id=$1 AND data_revisao<=CURRENT_DATE AND concluida=false", [userId]),
+      pool.query(`SELECT COUNT(*) as total FROM revisoes WHERE user_id=$1 AND data_revisao <= ${TODAY} AND concluida=false`, [userId]),
       pool.query(`SELECT m.nome, m.cor, SUM(s.duracao_minutos) as min FROM sessoes_estudo s JOIN materias m ON s.materia_id=m.id WHERE s.user_id=$1 GROUP BY m.nome, m.cor ORDER BY min DESC LIMIT 1`, [userId]),
-      pool.query(`SELECT EXTRACT(DOW FROM data_inicio) as dia, SUM(duracao_minutos) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('week',CURRENT_DATE) GROUP BY dia ORDER BY dia`, [userId])
+      pool.query(`SELECT EXTRACT(DOW FROM ${DATA_LOCAL}) as dia, SUM(duracao_minutos) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${WEEK_START} GROUP BY dia ORDER BY dia`, [userId])
     ]);
 
     const user = userRes.rows[0];
     const frase = frases[Math.floor(Math.random() * frases.length)];
 
     const metaRes = await pool.query(
-      "SELECT * FROM metas WHERE user_id=$1 AND tipo='diaria' AND concluida=false ORDER BY created_at DESC LIMIT 1",
+      `SELECT * FROM metas WHERE user_id=$1 AND tipo='diaria' AND concluida=false ORDER BY created_at DESC LIMIT 1`,
       [userId]
     );
 
@@ -83,18 +91,18 @@ exports.getEstatisticas = async (req, res) => {
       porMateria, porDiaSemana, porDia30d, porHora,
       evolucaoMensal, metasCumpridas, porTecnica, totalSessoes
     ] = await Promise.all([
-      // Totais de tempo
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio::date=CURRENT_DATE", [userId]),
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('week',CURRENT_DATE)", [userId]),
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('month',CURRENT_DATE)", [userId]),
-      pool.query("SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1", [userId]),
+      // Totais de tempo — todos com timezone Brasil
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL}::date = ${TODAY}`, [userId]),
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${WEEK_START}`, [userId]),
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${MONTH_START}`, [userId]),
+      pool.query(`SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1`, [userId]),
       // Distribuições
       pool.query(`SELECT m.nome, m.cor, SUM(s.duracao_minutos) as minutos FROM sessoes_estudo s JOIN materias m ON s.materia_id=m.id WHERE s.user_id=$1 GROUP BY m.nome, m.cor ORDER BY minutos DESC`, [userId]),
-      pool.query(`SELECT EXTRACT(DOW FROM data_inicio) as dia, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=DATE_TRUNC('week',CURRENT_DATE) GROUP BY dia ORDER BY dia`, [userId]),
-      pool.query(`SELECT EXTRACT(DOW FROM data_inicio) as dia, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 AND data_inicio>=CURRENT_DATE-30 GROUP BY dia ORDER BY dia`, [userId]),
-      pool.query(`SELECT EXTRACT(HOUR FROM data_inicio) as hora, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 GROUP BY hora ORDER BY hora`, [userId]),
-      // Evolução e metas
-      pool.query(`SELECT DATE_TRUNC('month', data_inicio) as mes, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 GROUP BY mes ORDER BY mes DESC LIMIT 12`, [userId]),
+      pool.query(`SELECT EXTRACT(DOW FROM ${DATA_LOCAL}) as dia, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${WEEK_START} GROUP BY dia ORDER BY dia`, [userId]),
+      pool.query(`SELECT EXTRACT(DOW FROM ${DATA_LOCAL}) as dia, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL} >= ${TODAY} - 30 GROUP BY dia ORDER BY dia`, [userId]),
+      pool.query(`SELECT EXTRACT(HOUR FROM ${DATA_LOCAL}) as hora, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 GROUP BY hora ORDER BY hora`, [userId]),
+      // Evolução mensal — usa timezone para agrupar no mês correto
+      pool.query(`SELECT DATE_TRUNC('month', ${DATA_LOCAL}) as mes, SUM(duracao_minutos) as minutos FROM sessoes_estudo WHERE user_id=$1 GROUP BY mes ORDER BY mes DESC LIMIT 12`, [userId]),
       pool.query(`SELECT COUNT(*) FILTER (WHERE concluida) as cumpridas, COUNT(*) as total FROM metas WHERE user_id=$1`, [userId]),
       pool.query(`SELECT tecnica, SUM(duracao_minutos) as minutos, COUNT(*) as sessoes FROM sessoes_estudo WHERE user_id=$1 AND tecnica IS NOT NULL GROUP BY tecnica ORDER BY minutos DESC`, [userId]),
       pool.query(`SELECT COUNT(*) as total FROM sessoes_estudo WHERE user_id=$1`, [userId])

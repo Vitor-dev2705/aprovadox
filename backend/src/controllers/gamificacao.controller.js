@@ -1,5 +1,9 @@
 const pool = require('../config/database');
 
+const TZ = 'America/Sao_Paulo';
+const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
+const DATA_LOCAL = `(data_inicio AT TIME ZONE '${TZ}')`;
+
 exports.getStatus = async (req, res) => {
   try {
     const user = await pool.query('SELECT xp, level, streak FROM users WHERE id=$1', [req.userId]);
@@ -26,15 +30,15 @@ exports.getStatus = async (req, res) => {
 exports.getMissoes = async (req, res) => {
   try {
     const today = await pool.query(
-      "SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND data_inicio::date=CURRENT_DATE",
+      `SELECT COALESCE(SUM(duracao_minutos),0) as min FROM sessoes_estudo WHERE user_id=$1 AND ${DATA_LOCAL}::date = ${TODAY_BR}`,
       [req.userId]
     );
     const reviewsDone = await pool.query(
-      "SELECT COUNT(*) as total FROM revisoes WHERE user_id=$1 AND data_revisao=CURRENT_DATE AND concluida=true",
+      `SELECT COUNT(*) as total FROM revisoes WHERE user_id=$1 AND data_revisao = ${TODAY_BR} AND concluida=true`,
       [req.userId]
     );
     const questionsDone = await pool.query(
-      "SELECT COUNT(*) as total FROM questoes_erradas WHERE user_id=$1 AND created_at::date=CURRENT_DATE",
+      `SELECT COUNT(*) as total FROM questoes_erradas WHERE user_id=$1 AND (created_at AT TIME ZONE '${TZ}')::date = ${TODAY_BR}`,
       [req.userId]
     );
 

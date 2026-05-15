@@ -1,5 +1,11 @@
 const pool = require('../config/database');
 
+const TZ = 'America/Sao_Paulo';
+const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
+const DATA_LOCAL = `(data_inicio AT TIME ZONE '${TZ}')`;
+const WEEK_START = `DATE_TRUNC('week', ${TODAY_BR})`;
+const MONTH_START = `DATE_TRUNC('month', ${TODAY_BR})`;
+
 exports.getAll = async (req, res) => {
   try {
     const { materia_id, data_inicio, data_fim, limit = 50 } = req.query;
@@ -46,15 +52,15 @@ exports.create = async (req, res) => {
       );
     }
 
-    // Update streak
+    // Update streak — usa data do Brasil para não quebrar streak por causa do UTC
     await pool.query(
       `UPDATE users SET
         streak = CASE
-          WHEN last_study_date = CURRENT_DATE - 1 THEN streak + 1
-          WHEN last_study_date = CURRENT_DATE THEN streak
+          WHEN last_study_date = ${TODAY_BR} - 1 THEN streak + 1
+          WHEN last_study_date = ${TODAY_BR} THEN streak
           ELSE 1
         END,
-        last_study_date = CURRENT_DATE,
+        last_study_date = ${TODAY_BR},
         level = GREATEST(1, FLOOR((xp + $1) / 100) + 1)
       WHERE id = $2`,
       [xp, req.userId]
@@ -67,7 +73,7 @@ exports.create = async (req, res) => {
     for (let i = 0; i < intervalDays.length; i++) {
       await pool.query(
         `INSERT INTO revisoes (user_id, materia_id, conteudo_id, assunto_id, sessao_id, tipo, data_revisao)
-         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE + $7::int)`,
+         VALUES ($1, $2, $3, $4, $5, $6, ${TODAY_BR} + $7::int)`,
         [req.userId, materia_id, conteudo_id || null, assunto_id || null, sessao.id, tipos[i], intervalDays[i]]
       );
     }
@@ -82,15 +88,15 @@ exports.create = async (req, res) => {
 exports.getStats = async (req, res) => {
   try {
     const today = await pool.query(
-      "SELECT COALESCE(SUM(duracao_minutos), 0) as minutos FROM sessoes_estudo WHERE user_id = $1 AND data_inicio::date = CURRENT_DATE",
+      `SELECT COALESCE(SUM(duracao_minutos), 0) as minutos FROM sessoes_estudo WHERE user_id = $1 AND ${DATA_LOCAL}::date = ${TODAY_BR}`,
       [req.userId]
     );
     const week = await pool.query(
-      "SELECT COALESCE(SUM(duracao_minutos), 0) as minutos FROM sessoes_estudo WHERE user_id = $1 AND data_inicio >= DATE_TRUNC('week', CURRENT_DATE)",
+      `SELECT COALESCE(SUM(duracao_minutos), 0) as minutos FROM sessoes_estudo WHERE user_id = $1 AND ${DATA_LOCAL} >= ${WEEK_START}`,
       [req.userId]
     );
     const month = await pool.query(
-      "SELECT COALESCE(SUM(duracao_minutos), 0) as minutos FROM sessoes_estudo WHERE user_id = $1 AND data_inicio >= DATE_TRUNC('month', CURRENT_DATE)",
+      `SELECT COALESCE(SUM(duracao_minutos), 0) as minutos FROM sessoes_estudo WHERE user_id = $1 AND ${DATA_LOCAL} >= ${MONTH_START}`,
       [req.userId]
     );
 

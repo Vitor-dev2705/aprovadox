@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+const TZ = 'America/Sao_Paulo';
+const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
+
 const SELECT_REVISAO = `
   SELECT r.*,
     m.nome as materia_nome, m.cor as materia_cor,
@@ -33,7 +36,7 @@ exports.getToday = async (req, res) => {
   try {
     const result = await pool.query(
       `${SELECT_REVISAO}
-       WHERE r.user_id = $1 AND r.data_revisao <= CURRENT_DATE AND r.concluida = false
+       WHERE r.user_id = $1 AND r.data_revisao <= ${TODAY_BR} AND r.concluida = false
        ORDER BY r.data_revisao ASC`,
       [req.userId]
     );

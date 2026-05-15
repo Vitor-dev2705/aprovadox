@@ -1,11 +1,14 @@
 const pool = require('../config/database');
 
+const TZ = 'America/Sao_Paulo';
+const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
+
 exports.getAll = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT c.*,
         (SELECT COUNT(*) FROM materias WHERE concurso_id = c.id) as total_materias,
-        CASE WHEN c.data_prova IS NOT NULL THEN c.data_prova - CURRENT_DATE ELSE NULL END as dias_restantes
+        CASE WHEN c.data_prova IS NOT NULL THEN c.data_prova - ${TODAY_BR} ELSE NULL END as dias_restantes
       FROM concursos c WHERE c.user_id = $1 ORDER BY c.data_prova ASC NULLS LAST`,
       [req.userId]
     );
