@@ -31,6 +31,7 @@ export const useStudyStore = create(
       pomodoroPhase: 'work',
       pomodoroCount: 0,
       totalWorkSeconds: 0,        // Acumula SOMENTE tempo de estudo (exclui pausas do Pomodoro)
+      autoSavedSeconds: 0,        // Segundos já salvos automaticamente por blocos Pomodoro completos
 
       _intervalId: null,          // NÃO persistido
 
@@ -45,6 +46,7 @@ export const useStudyStore = create(
         selectedAssunto: null,
       }),
       setAssunto: (id) => set({ selectedAssunto: id }),
+      addAutoSaved: (secs) => set({ autoSavedSeconds: get().autoSavedSeconds + secs }),
       setTecnica: (tecnica) => set({ selectedTecnica: tecnica }),
       setNotes: (notes) => set({ notes }),
 
@@ -94,7 +96,7 @@ export const useStudyStore = create(
         get()._clearInterval()
         set({
           isRunning: false, isPaused: false, seconds: 0, startTime: null,
-          notes: '', pomodoroPhase: 'work', pomodoroCount: 0, totalWorkSeconds: 0,
+          notes: '', pomodoroPhase: 'work', pomodoroCount: 0, totalWorkSeconds: 0, autoSavedSeconds: 0,
           selectedConteudo: null, conteudoTitulo: null, conteudoTipo: null,
           selectedAssunto: null,
         })
@@ -163,6 +165,7 @@ export const useStudyStore = create(
         pomodoroPhase: state.pomodoroPhase,
         pomodoroCount: state.pomodoroCount,
         totalWorkSeconds: state.totalWorkSeconds,
+        autoSavedSeconds: state.autoSavedSeconds,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) setTimeout(() => state._hydrate?.(), 0)

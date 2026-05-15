@@ -156,6 +156,8 @@ export default function Cronometro() {
   const setPomodoroPhase = useStudyStore((s) => s.setPomodoroPhase);
   const totalWorkSeconds = useStudyStore((s) => s.totalWorkSeconds);
   const getStudySeconds = useStudyStore((s) => s.getStudySeconds);
+  const autoSavedSeconds = useStudyStore((s) => s.autoSavedSeconds);
+  const addAutoSaved = useStudyStore((s) => s.addAutoSaved);
 
   // UI local
   const [modo, setModo] = useState("cronometro");
@@ -300,18 +302,44 @@ export default function Cronometro() {
     }
   }, [selectedMateria]);
 
-  // Auto-cycle do Pomodoro
+  // Auto-cycle do Pomodoro — auto-salva cada bloco de 25min
   useEffect(() => {
     if (selectedTecnica === "Pomodoro" && isRunning) {
       const limit = pomodoroPhase === "work" ? POMODORO_WORK : POMODORO_BREAK;
       if (seconds >= limit && Date.now() - lastBeepRef.current > 5000) {
         lastBeepRef.current = Date.now();
         if (soundOn) playBeep();
+
         if (pomodoroPhase === "work") {
-          toast.success("🍅 Pomodoro concluído! Hora de descansar 5 min.");
+          // Captura dados ANTES da transição de fase (startTime será resetado)
+          const blockStartISO = startTime || new Date(Date.now() - seconds * 1000).toISOString();
+          const blockEndISO = new Date().toISOString();
+          const blockConteudoId = selectedConteudo;
+          const blockMateriaId = selectedMateria;
+          const blockNotes = notes;
+
+          // Transição → break (acumula totalWorkSeconds, reseta seconds)
           setPomodoroPhase("break");
+
+          // Auto-salva a sessão do bloco completo
+          sessaoService.create({
+            materia_id: blockMateriaId,
+            conteudo_id: blockConteudoId || null,
+            tecnica: 'Pomodoro',
+            duracao_minutos: 25,
+            data_inicio: blockStartISO,
+            data_fim: blockEndISO,
+            notas: blockNotes,
+          }).then(({ data }) => {
+            addAutoSaved(POMODORO_WORK);
+            toast.success(`🍅 Pomodoro salvo! +${data.xp_ganho || 0} XP — Descanse 5 min`, { duration: 4000 });
+            if (data.xp_ganho) updateUser({ xp: undefined });
+          }).catch(() => {
+            toast.error("Erro ao salvar bloco Pomodoro");
+          });
         } else {
-          toast("⚡ Pausa encerrada! Vamos estudar!", { icon: "🎯" });
+          // Break acabou → novo Pomodoro com mesma matéria + conteúdo atual
+          toast("⚡ Pausa encerrada! Novo Pomodoro!", { icon: "🎯" });
           setPomodoroPhase("work");
         }
       }
@@ -342,23 +370,9 @@ export default function Cronometro() {
 
   const canStart = !!selectedMateria;
 
-  // Troca de conteúdo — se durante Pomodoro work, finaliza o bloco e inicia pausa
+  // Troca de conteúdo — apenas atualiza a referência, timer continua normalmente
   const handleConteudoChange = (id, titulo, tipo) => {
-    const prevId = selectedConteudo;
     setConteudo(id, titulo, tipo);
-
-    // Só dispara se realmente trocou para um NOVO conteúdo durante trabalho ativo
-    if (
-      selectedTecnica === 'Pomodoro' &&
-      pomodoroPhase === 'work' &&
-      isRunning &&
-      id != null &&
-      String(id) !== String(prevId)
-    ) {
-      if (soundOn) playBeep();
-      toast.success('🍅 Bloco finalizado! Descanse 5 min antes da próxima aula.', { duration: 4000 });
-      setPomodoroPhase('break');
-    }
   };
 
   const handleStart = () => {
@@ -372,22 +386,28 @@ export default function Cronometro() {
   };
 
   const handleStop = () => {
-    // Usa apenas tempo de estudo real (exclui pausas do Pomodoro)
     const studySecs = getStudySeconds();
+    const unsavedSecs = studySecs - autoSavedSeconds;
 
-    if (studySecs < 30) {
-      toast.error("Sessão muito curta. Estude pelo menos 30 segundos.");
+    // Se tudo já foi salvo por blocos Pomodoro completos (ou está na pausa)
+    if (unsavedSecs < 30) {
+      if (pomodoroCount > 0) {
+        toast.success(`Sessão finalizada! ${pomodoroCount} Pomodoro${pomodoroCount > 1 ? 's' : ''} já salvo${pomodoroCount > 1 ? 's' : ''}.`);
+      } else {
+        toast.error("Sessão muito curta. Estude pelo menos 30 segundos.");
+      }
       reset();
       return;
     }
+
     if (soundOn) playBeep();
-    pause(); // pausa o timer enquanto o modal está aberto
+    pause();
 
-    const duracao = Math.floor(studySecs / 60) || 1;
+    const duracao = Math.floor(unsavedSecs / 60) || 1;
     const startISO =
-      startTime || new Date(Date.now() - studySecs * 1000).toISOString();
+      startTime || new Date(Date.now() - unsavedSecs * 1000).toISOString();
 
-    // Guarda os dados e abre o modal para o usuário informar o assunto
+    // Guarda apenas o tempo NÃO salvo para o modal
     pendingStopRef.current = {
       materia_id: selectedMateria,
       conteudo_id: selectedConteudo || null,
@@ -426,10 +446,10 @@ export default function Cronometro() {
         assunto_id: assuntoId || null,
         notas: pendingStopRef.current.notas,
       });
-      const breakInfo = selectedTecnica === "Pomodoro" && pomodoroCount > 0
-        ? ` (${pomodoroCount} pomodoro${pomodoroCount > 1 ? 's' : ''}, pausas não contabilizadas)`
+      const blocosInfo = pomodoroCount > 0
+        ? ` (+ ${pomodoroCount} bloco${pomodoroCount > 1 ? 's' : ''} Pomodoro já salvos)`
         : '';
-      toast.success(`Sessão salva! +${data.xp_ganho || 0} XP${breakInfo}`);
+      toast.success(`Sessão salva! +${data.xp_ganho || 0} XP${blocosInfo}`);
       if (data.xp_ganho) updateUser({ xp: undefined });
     } catch {
       toast.error("Erro ao salvar sessão");
@@ -965,9 +985,7 @@ export default function Cronometro() {
               <label className="text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-2">
                 Conteúdo
                 <span className="text-slate-500 text-xs">
-                  {isRunning && selectedTecnica === 'Pomodoro' && pomodoroPhase === 'work'
-                    ? '(trocar = finaliza bloco)'
-                    : '(opcional)'}
+                  {isRunning ? '(troque a qualquer momento)' : '(opcional)'}
                 </span>
               </label>
 
@@ -1082,8 +1100,13 @@ export default function Cronometro() {
                 25 min de foco → 5 min de pausa
               </p>
               <p className="text-xs text-slate-400">
-                A cada 4 pomodoros, descanse 15 min
+                Cada bloco é salvo automaticamente ao completar
               </p>
+              {pomodoroCount > 0 && (
+                <p className="text-xs text-accent-400 font-medium mt-1">
+                  ✅ {pomodoroCount} bloco{pomodoroCount > 1 ? 's' : ''} salvo{pomodoroCount > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           )}
 
