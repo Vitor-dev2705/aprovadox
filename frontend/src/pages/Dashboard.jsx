@@ -66,55 +66,141 @@ function formatarTempoCompacto(minutos) {
   return `${h}h${m}m`
 }
 
-// ==================== CALENDÁRIO ====================
+// Intensidade do heatmap — retorna opacidade 0.0 a 1.0
+function getIntensidade(minutos, maxMinutos) {
+  if (!minutos || minutos <= 0) return 0
+  const safe = Math.max(maxMinutos, 1)
+  return Math.min(1, 0.15 + (minutos / safe) * 0.85)
+}
+
+// ==================== CALENDARIO ====================
 function CalendarioMensal({ calendario, mes, onMesChange }) {
+  const [hoveredDay, setHoveredDay] = useState(null)
   const ano = mes.getFullYear()
   const mesIdx = mes.getMonth()
 
-  const primeiroDia = new Date(ano, mesIdx, 1).getDay() // 0=Dom
+  const primeiroDia = new Date(ano, mesIdx, 1).getDay()
   const diasNoMes = new Date(ano, mesIdx + 1, 0).getDate()
+  const diasMesAnterior = new Date(ano, mesIdx, 0).getDate()
   const hoje = new Date()
-  const isHoje = (dia) =>
+  const ehHoje = (dia) =>
     dia === hoje.getDate() && mesIdx === hoje.getMonth() && ano === hoje.getFullYear()
 
-  // Mapa de data → { sessoes, minutos }
+  // Mapa de dia → { sessoes, minutos }
   const dadosMap = {}
+  let maxMin = 0
   ;(calendario || []).forEach((item) => {
-    const d = new Date(item.data + 'T12:00:00') // evita timezone shift
+    const d = new Date(item.data + 'T12:00:00')
     const key = d.getDate()
-    dadosMap[key] = { sessoes: parseInt(item.sessoes), minutos: parseInt(item.minutos) }
+    const min = parseInt(item.minutos)
+    dadosMap[key] = { sessoes: parseInt(item.sessoes), minutos: min }
+    if (min > maxMin) maxMin = min
   })
 
+  // Total do mes
+  const totalMes = Object.values(dadosMap).reduce((s, v) => s + v.minutos, 0)
+  const diasAtivos = Object.keys(dadosMap).length
+
+  // Monta o grid completo (6 semanas = 42 celulas)
   const cells = []
-  // Espaços vazios antes do dia 1
-  for (let i = 0; i < primeiroDia; i++) {
-    cells.push(<div key={`empty-${i}`} className="aspect-square" />)
+
+  // Dias do mes anterior (cinza)
+  for (let i = primeiroDia - 1; i >= 0; i--) {
+    const dia = diasMesAnterior - i
+    cells.push(
+      <div key={`prev-${dia}`} className="min-h-[52px] lg:min-h-[66px] rounded-lg flex flex-col items-center justify-start pt-1.5 text-[11px]">
+        <span className="text-slate-700 font-medium">{dia}</span>
+      </div>
+    )
   }
-  // Dias do mês
+
+  // Dias do mes atual
   for (let dia = 1; dia <= diasNoMes; dia++) {
     const info = dadosMap[dia]
-    const ehHoje = isHoje(dia)
+    const isToday = ehHoje(dia)
+    const intensidade = info ? getIntensidade(info.minutos, maxMin) : 0
+    const isHovered = hoveredDay === dia
+
     cells.push(
       <div
         key={dia}
-        className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all text-xs
-          ${ehHoje ? 'border-brand-500/50 bg-brand-500/10 ring-1 ring-brand-500/30' : ''}
-          ${info ? 'border-accent-500/30 bg-accent-500/8' : 'border-white/5 bg-dark-700/30'}
-        `}
+        className="relative group"
+        onMouseEnter={() => setHoveredDay(dia)}
+        onMouseLeave={() => setHoveredDay(null)}
       >
-        <span className={`font-bold text-[11px] ${ehHoje ? 'text-brand-400' : info ? 'text-white' : 'text-slate-500'}`}>
-          {dia}
-        </span>
-        {info && (
-          <>
-            <span className="text-accent-400 font-semibold text-[9px] leading-none">
-              {info.sessoes} ativ.
-            </span>
-            <span className="text-slate-400 text-[9px] leading-none">
-              {formatarTempoCompacto(info.minutos)}
-            </span>
-          </>
+        <div
+          className={`min-h-[52px] lg:min-h-[66px] rounded-lg flex flex-col items-center justify-start pt-1.5 gap-0.5 transition-all duration-200 cursor-default
+            ${isToday ? 'ring-2 ring-brand-400/60 ring-offset-1 ring-offset-dark-800' : ''}
+            ${isHovered && info ? 'scale-[1.04] z-10 shadow-lg shadow-black/40' : ''}
+          `}
+          style={info ? {
+            backgroundColor: `rgba(16, 185, 129, ${intensidade * 0.25})`,
+            border: `1px solid rgba(16, 185, 129, ${intensidade * 0.4})`,
+          } : {
+            backgroundColor: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.04)',
+          }}
+        >
+          {/* Numero do dia */}
+          <span className={`font-bold text-[11px] leading-none ${
+            isToday ? 'text-brand-400' : info ? 'text-white' : 'text-slate-600'
+          }`}>
+            {dia}
+          </span>
+
+          {/* Barra de intensidade + dados */}
+          {info && (
+            <div className="flex flex-col items-center gap-0.5 mt-auto pb-1.5">
+              {/* Barra visual */}
+              <div className="w-5 h-1 rounded-full overflow-hidden bg-white/5">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.max(20, intensidade * 100)}%`,
+                    backgroundColor: `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})`,
+                  }}
+                />
+              </div>
+              <span className="text-[9px] font-semibold leading-none hidden lg:block"
+                style={{ color: `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})` }}
+              >
+                {formatarTempoCompacto(info.minutos)}
+              </span>
+            </div>
+          )}
+
+          {/* Dot indicador (mobile) */}
+          {info && (
+            <div className="lg:hidden mt-auto mb-1.5">
+              <div className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})` }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Tooltip no hover */}
+        {isHovered && info && (
+          <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+            <div className="bg-dark-600 border border-white/10 rounded-xl px-3 py-2 shadow-2xl shadow-black/60 whitespace-nowrap">
+              <p className="text-[10px] text-slate-400 mb-0.5">{dia} de {MESES[mesIdx]}</p>
+              <p className="text-xs font-bold text-white">{formatarTempo(info.minutos)}</p>
+              <p className="text-[10px] text-accent-400">{info.sessoes} {info.sessoes === 1 ? 'sessao' : 'sessoes'}</p>
+            </div>
+            <div className="w-2 h-2 bg-dark-600 border-r border-b border-white/10 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2" />
+          </div>
         )}
+      </div>
+    )
+  }
+
+  // Dias do proximo mes (cinza) — preenche ate completar 6 semanas ou completar a linha
+  const totalCells = cells.length
+  const remaining = (7 - (totalCells % 7)) % 7
+  for (let dia = 1; dia <= remaining; dia++) {
+    cells.push(
+      <div key={`next-${dia}`} className="min-h-[52px] lg:min-h-[66px] rounded-lg flex flex-col items-center justify-start pt-1.5 text-[11px]">
+        <span className="text-slate-700 font-medium">{dia}</span>
       </div>
     )
   }
@@ -122,53 +208,72 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
   const prevMes = () => onMesChange(new Date(ano, mesIdx - 1, 1))
   const nextMes = () => onMesChange(new Date(ano, mesIdx + 1, 1))
   const irParaHoje = () => onMesChange(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+  const isCurrentMonth = mesIdx === hoje.getMonth() && ano === hoje.getFullYear()
 
   return (
-    <div className="space-y-4">
-      {/* Header do calendário */}
+    <div className="space-y-3">
+      {/* Header navegacao */}
       <div className="flex items-center justify-between">
-        <button
+        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
           onClick={prevMes}
-          className="p-2 rounded-lg border border-white/10 hover:border-white/20 text-slate-400 hover:text-white transition-all"
-        >
+          className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
           <FiChevronLeft size={16} />
-        </button>
-        <h3 className="font-bold text-white text-sm">
-          {MESES[mesIdx]} de {ano}
-        </h3>
-        <button
+        </motion.button>
+
+        <div className="text-center">
+          <h3 className="font-bold text-white text-sm tracking-wide">
+            {MESES[mesIdx]}
+            <span className="text-slate-500 font-normal ml-1.5">{ano}</span>
+          </h3>
+          {diasAtivos > 0 && (
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              {formatarTempo(totalMes)} em {diasAtivos} dia{diasAtivos > 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+
+        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
           onClick={nextMes}
-          className="p-2 rounded-lg border border-white/10 hover:border-white/20 text-slate-400 hover:text-white transition-all"
-        >
+          className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
           <FiChevronRight size={16} />
-        </button>
+        </motion.button>
       </div>
 
       {/* Header dias da semana */}
       <div className="grid grid-cols-7 gap-1">
-        {DIAS_SEMANA.map((d) => (
-          <div key={d} className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider py-1">
+        {DIAS_SEMANA.map((d, i) => (
+          <div key={d} className={`text-center text-[10px] font-bold uppercase tracking-widest py-1.5 ${
+            i === 0 || i === 6 ? 'text-slate-600' : 'text-slate-500'
+          }`}>
             {d}
           </div>
         ))}
       </div>
 
-      {/* Grid do calendário */}
+      {/* Grid do calendario */}
       <div className="grid grid-cols-7 gap-1">
         {cells}
       </div>
 
-      {/* Botão Hoje */}
-      {(mesIdx !== hoje.getMonth() || ano !== hoje.getFullYear()) && (
-        <div className="flex justify-center">
-          <button
-            onClick={irParaHoje}
-            className="text-xs text-brand-400 hover:text-brand-300 font-semibold border border-brand-500/20 px-3 py-1 rounded-lg hover:bg-brand-500/10 transition-all"
-          >
+      {/* Footer: legenda + botao Hoje */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-slate-600 mr-1">Menos</span>
+          {[0.05, 0.15, 0.35, 0.6, 0.9].map((op, i) => (
+            <div key={i} className="w-3 h-3 rounded-[3px]"
+              style={{ backgroundColor: `rgba(16, 185, 129, ${op * 0.3})`, border: `1px solid rgba(16, 185, 129, ${op * 0.4})` }}
+            />
+          ))}
+          <span className="text-[10px] text-slate-600 ml-1">Mais</span>
+        </div>
+
+        {!isCurrentMonth && (
+          <button onClick={irParaHoje}
+            className="text-[10px] text-brand-400 hover:text-brand-300 font-semibold px-2 py-0.5 rounded border border-brand-500/20 hover:bg-brand-500/10 transition-all">
             Hoje
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
