@@ -4,7 +4,7 @@ const TZ = 'America/Sao_Paulo';
 const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
 
 const SELECT_REVISAO = `
-  SELECT r.*,
+  SELECT r.*, r.data_revisao::text as data_revisao_str,
     m.nome as materia_nome, m.cor as materia_cor,
     c.titulo as conteudo_titulo, c.tipo as conteudo_tipo,
     a.nome as assunto_nome
@@ -68,12 +68,21 @@ exports.complete = async (req, res) => {
 
 exports.getCalendar = async (req, res) => {
   try {
-    const { mes, ano } = req.query;
+    const mes = req.query.mes || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const startDate = `${mes}-01`;
+
     const result = await pool.query(
-      `SELECT data_revisao, COUNT(*) as total, COUNT(*) FILTER (WHERE concluida) as concluidas, tipo
-       FROM revisoes WHERE user_id = $1 AND EXTRACT(MONTH FROM data_revisao) = $2 AND EXTRACT(YEAR FROM data_revisao) = $3
-       GROUP BY data_revisao, tipo ORDER BY data_revisao`,
-      [req.userId, mes || new Date().getMonth() + 1, ano || new Date().getFullYear()]
+      `SELECT data_revisao::text as data,
+              COUNT(*) as total,
+              COUNT(*) FILTER (WHERE concluida) as concluidas,
+              COUNT(*) FILTER (WHERE NOT concluida) as pendentes
+       FROM revisoes
+       WHERE user_id = $1
+         AND data_revisao >= $2::date
+         AND data_revisao < ($2::date + INTERVAL '1 month')
+       GROUP BY data_revisao
+       ORDER BY data_revisao`,
+      [req.userId, startDate]
     );
     res.json(result.rows);
   } catch (err) {
