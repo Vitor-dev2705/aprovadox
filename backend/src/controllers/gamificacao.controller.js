@@ -2,7 +2,7 @@ const pool = require('../config/database');
 
 const TZ = 'America/Sao_Paulo';
 const TODAY_BR = `(NOW() AT TIME ZONE '${TZ}')::date`;
-const DATA_LOCAL = `(data_inicio AT TIME ZONE '${TZ}')`;
+const DATA_LOCAL = `(data_inicio AT TIME ZONE 'UTC' AT TIME ZONE '${TZ}')`;
 
 exports.getStatus = async (req, res) => {
   try {

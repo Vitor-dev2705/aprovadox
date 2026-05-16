@@ -99,7 +99,7 @@ exports.getAll = async (req, res) => {
     const todayMin = await pool.query(
       `SELECT COALESCE(SUM(duracao_minutos), 0)::int as min
        FROM sessoes_estudo
-       WHERE user_id = $1 AND (data_inicio AT TIME ZONE '${TZ}')::date = ${TODAY_BR}`,
+       WHERE user_id = $1 AND (data_inicio AT TIME ZONE 'UTC' AT TIME ZONE '${TZ}')::date = ${TODAY_BR}`,
       [userId]
     );
     const minHoje = todayMin.rows[0].min;

@@ -4,7 +4,7 @@ const pool = require('../config/database');
 // para que "hoje", "esta semana", "este mês" reflitam o horário local do usuário
 const TZ = 'America/Sao_Paulo';
 const TODAY     = `(NOW() AT TIME ZONE '${TZ}')::date`;
-const DATA_LOCAL = `(data_inicio AT TIME ZONE '${TZ}')`;
+const DATA_LOCAL = `(data_inicio AT TIME ZONE 'UTC' AT TIME ZONE '${TZ}')`;
 const WEEK_START = `DATE_TRUNC('week', ${TODAY})`;
 const MONTH_START = `DATE_TRUNC('month', ${TODAY})`;
 
@@ -124,5 +124,56 @@ exports.getEstatisticas = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar estatísticas' });
+  }
+};
+
+// Calendário mensal — sessões agrupadas por dia
+exports.getCalendario = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const mes = req.query.mes || new Date().toISOString().slice(0, 7); // '2026-05'
+    const startDate = `${mes}-01`;
+
+    const result = await pool.query(
+      `SELECT
+        ${DATA_LOCAL}::date as data,
+        COUNT(*) as sessoes,
+        COALESCE(SUM(duracao_minutos), 0) as minutos
+      FROM sessoes_estudo
+      WHERE user_id = $1
+        AND ${DATA_LOCAL}::date >= $2::date
+        AND ${DATA_LOCAL}::date < ($2::date + INTERVAL '1 month')
+      GROUP BY data
+      ORDER BY data`,
+      [userId, startDate]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao buscar calendário' });
+  }
+};
+
+// Atividades recentes — últimas sessões com detalhes
+exports.getAtividades = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const result = await pool.query(
+      `SELECT s.id, s.duracao_minutos, s.tecnica, s.data_inicio,
+              m.nome as materia_nome, m.cor as materia_cor,
+              c.titulo as conteudo_titulo,
+              a.nome as assunto_nome
+       FROM sessoes_estudo s
+       LEFT JOIN materias m ON s.materia_id = m.id
+       LEFT JOIN conteudos c ON s.conteudo_id = c.id
+       LEFT JOIN assuntos a ON s.assunto_id = a.id
+       WHERE s.user_id = $1
+       ORDER BY s.data_inicio DESC
+       LIMIT 10`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar atividades' });
   }
 };
