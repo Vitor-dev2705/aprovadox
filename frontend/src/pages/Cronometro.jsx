@@ -17,6 +17,7 @@ import {
   FiBookOpen,
   FiSave,
   FiCalendar,
+  FiXCircle,
 } from "react-icons/fi";
 import { sessaoService } from "../services/sessao.service";
 import { materiaService } from "../services/materia.service";
@@ -176,6 +177,7 @@ export default function Cronometro() {
   const [saving, setSaving] = useState(false);
   const pendingStopRef = useRef(null); // guarda dados da sessão enquanto o modal está aberto
   const [revisoesPendentes, setRevisoesPendentes] = useState([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Manual mode
   const [manualMateria, setManualMateria] = useState(null);
@@ -487,6 +489,21 @@ export default function Cronometro() {
     setShowFinishModal(false);
     pendingStopRef.current = null;
     // Mantém pausado para o usuário decidir se quer continuar
+  };
+
+  // Cancelar sessão → reseta timer e vai pro modo manual com matéria pré-selecionada
+  const handleCancelSession = () => {
+    const matId = selectedMateria;
+    const matName = materiaName;
+    reset();
+    setShowCancelModal(false);
+    setModo('manual');
+    // Pré-seleciona a matéria no modo manual
+    if (matId) {
+      setManualMateria(matId);
+      setManualMateriaName(matName);
+    }
+    toast('Sessão cancelada. Registre o tempo correto abaixo.', { icon: '📝', duration: 4000 });
   };
 
   const pomodoroLimit =
@@ -939,8 +956,22 @@ export default function Cronometro() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleStop}
                 className="w-12 h-12 rounded-full bg-red-500/20 border-2 border-red-500/50 flex items-center justify-center"
+                title="Finalizar sessão"
               >
                 <FiSquare size={20} className="text-red-400" />
+              </motion.button>
+            )}
+            {(isRunning || isPaused) && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowCancelModal(true)}
+                className="w-10 h-10 rounded-full bg-dark-600 border-2 border-white/10 hover:border-white/20 flex items-center justify-center"
+                title="Cancelar e registrar manualmente"
+              >
+                <FiXCircle size={16} className="text-slate-400" />
               </motion.button>
             )}
           </div>
@@ -1371,6 +1402,43 @@ export default function Cronometro() {
               ) : (
                 <><FiSave size={16} /> {selectedTecnica === 'Revisão Espaçada' && revisoesPendentes.length > 0 ? 'Salvar e Concluir Revisões' : 'Salvar Sessão'}</>
               )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ==================== MODAL DE CANCELAMENTO ==================== */}
+      <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)} title="⚠️ Cancelar Sessão">
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+            <p className="text-sm text-yellow-200 font-medium mb-1">
+              Esqueceu de pausar o cronômetro?
+            </p>
+            <p className="text-xs text-slate-400">
+              O tempo registrado será descartado e você poderá informar o tempo real no modo manual.
+            </p>
+          </div>
+
+          {pomodoroCount > 0 && (
+            <div className="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20">
+              <p className="text-xs text-brand-400">
+                <span className="font-semibold">Atenção:</span> {pomodoroCount} bloco{pomodoroCount > 1 ? 's' : ''} Pomodoro já foi{pomodoroCount > 1 ? 'ram' : ''} salvo{pomodoroCount > 1 ? 's' : ''} automaticamente e não será{pomodoroCount > 1 ? 'ão' : ''} afetado{pomodoroCount > 1 ? 's' : ''}.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={() => setShowCancelModal(false)}
+              className="flex-1 py-3 rounded-xl border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-all text-sm font-semibold"
+            >
+              Voltar
+            </button>
+            <button
+              onClick={handleCancelSession}
+              className="flex-1 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 font-bold text-sm hover:bg-yellow-500/30 transition-all flex items-center justify-center gap-2"
+            >
+              <FiXCircle size={16} /> Cancelar e Registrar Manual
             </button>
           </div>
         </div>
