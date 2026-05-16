@@ -74,7 +74,7 @@ function getIntensidade(minutos, maxMinutos) {
 }
 
 // ==================== CALENDARIO ====================
-function CalendarioMensal({ calendario, mes, onMesChange }) {
+function CalendarioMensal({ calendario, mes, onMesChange, selectedDay, onDayClick }) {
   const [hoveredDay, setHoveredDay] = useState(null)
   const ano = mes.getFullYear()
   const mesIdx = mes.getMonth()
@@ -85,6 +85,9 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
   const hoje = new Date()
   const ehHoje = (dia) =>
     dia === hoje.getDate() && mesIdx === hoje.getMonth() && ano === hoje.getFullYear()
+
+  const buildDateStr = (dia) =>
+    `${ano}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
 
   // Mapa de dia → { sessoes, minutos }
   const dadosMap = {}
@@ -97,14 +100,12 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
     if (min > maxMin) maxMin = min
   })
 
-  // Total do mes
   const totalMes = Object.values(dadosMap).reduce((s, v) => s + v.minutos, 0)
   const diasAtivos = Object.keys(dadosMap).length
 
-  // Monta o grid completo (6 semanas = 42 celulas)
   const cells = []
 
-  // Dias do mes anterior (cinza)
+  // Dias do mes anterior
   for (let i = primeiroDia - 1; i >= 0; i--) {
     const dia = diasMesAnterior - i
     cells.push(
@@ -120,6 +121,8 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
     const isToday = ehHoje(dia)
     const intensidade = info ? getIntensidade(info.minutos, maxMin) : 0
     const isHovered = hoveredDay === dia
+    const dateStr = buildDateStr(dia)
+    const isSelected = selectedDay === dateStr
 
     cells.push(
       <div
@@ -128,12 +131,18 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
         onMouseEnter={() => setHoveredDay(dia)}
         onMouseLeave={() => setHoveredDay(null)}
       >
-        <div
-          className={`min-h-[52px] lg:min-h-[66px] rounded-lg flex flex-col items-center justify-start pt-1.5 gap-0.5 transition-all duration-200 cursor-default
-            ${isToday ? 'ring-2 ring-brand-400/60 ring-offset-1 ring-offset-dark-800' : ''}
-            ${isHovered && info ? 'scale-[1.04] z-10 shadow-lg shadow-black/40' : ''}
+        <button
+          type="button"
+          onClick={() => onDayClick(isSelected ? null : dateStr)}
+          className={`w-full min-h-[52px] lg:min-h-[66px] rounded-lg flex flex-col items-center justify-start pt-1.5 gap-0.5 transition-all duration-200 cursor-pointer
+            ${isSelected ? 'ring-2 ring-brand-400 ring-offset-1 ring-offset-dark-800 scale-[1.04] z-10 shadow-lg shadow-brand-500/30' : ''}
+            ${!isSelected && isToday ? 'ring-2 ring-brand-400/40 ring-offset-1 ring-offset-dark-800' : ''}
+            ${isHovered && !isSelected ? 'scale-[1.03] z-10 shadow-md shadow-black/30' : ''}
           `}
-          style={info ? {
+          style={isSelected ? {
+            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            border: '1px solid rgba(99, 102, 241, 0.5)',
+          } : info ? {
             backgroundColor: `rgba(16, 185, 129, ${intensidade * 0.25})`,
             border: `1px solid rgba(16, 185, 129, ${intensidade * 0.4})`,
           } : {
@@ -141,46 +150,41 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
             border: '1px solid rgba(255,255,255,0.04)',
           }}
         >
-          {/* Numero do dia */}
           <span className={`font-bold text-[11px] leading-none ${
-            isToday ? 'text-brand-400' : info ? 'text-white' : 'text-slate-600'
+            isSelected ? 'text-brand-300' : isToday ? 'text-brand-400' : info ? 'text-white' : 'text-slate-600'
           }`}>
             {dia}
           </span>
 
-          {/* Barra de intensidade + dados */}
           {info && (
             <div className="flex flex-col items-center gap-0.5 mt-auto pb-1.5">
-              {/* Barra visual */}
               <div className="w-5 h-1 rounded-full overflow-hidden bg-white/5">
-                <div
-                  className="h-full rounded-full transition-all"
+                <div className="h-full rounded-full transition-all"
                   style={{
                     width: `${Math.max(20, intensidade * 100)}%`,
-                    backgroundColor: `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})`,
+                    backgroundColor: isSelected ? 'rgba(99,102,241,0.8)' : `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})`,
                   }}
                 />
               </div>
               <span className="text-[9px] font-semibold leading-none hidden lg:block"
-                style={{ color: `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})` }}
+                style={{ color: isSelected ? '#a5b4fc' : `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})` }}
               >
                 {formatarTempoCompacto(info.minutos)}
               </span>
             </div>
           )}
 
-          {/* Dot indicador (mobile) */}
           {info && (
             <div className="lg:hidden mt-auto mb-1.5">
               <div className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})` }}
+                style={{ backgroundColor: isSelected ? '#818cf8' : `rgba(16, 185, 129, ${0.5 + intensidade * 0.5})` }}
               />
             </div>
           )}
-        </div>
+        </button>
 
-        {/* Tooltip no hover */}
-        {isHovered && info && (
+        {/* Tooltip no hover (nao aparece se selecionado) */}
+        {isHovered && info && !isSelected && (
           <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
             <div className="bg-dark-600 border border-white/10 rounded-xl px-3 py-2 shadow-2xl shadow-black/60 whitespace-nowrap">
               <p className="text-[10px] text-slate-400 mb-0.5">{dia} de {MESES[mesIdx]}</p>
@@ -194,7 +198,7 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
     )
   }
 
-  // Dias do proximo mes (cinza) — preenche ate completar 6 semanas ou completar a linha
+  // Dias do proximo mes
   const totalCells = cells.length
   const remaining = (7 - (totalCells % 7)) % 7
   for (let dia = 1; dia <= remaining; dia++) {
@@ -212,7 +216,6 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
 
   return (
     <div className="space-y-3">
-      {/* Header navegacao */}
       <div className="flex items-center justify-between">
         <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
           onClick={prevMes}
@@ -239,7 +242,6 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
         </motion.button>
       </div>
 
-      {/* Header dias da semana */}
       <div className="grid grid-cols-7 gap-1">
         {DIAS_SEMANA.map((d, i) => (
           <div key={d} className={`text-center text-[10px] font-bold uppercase tracking-widest py-1.5 ${
@@ -250,12 +252,10 @@ function CalendarioMensal({ calendario, mes, onMesChange }) {
         ))}
       </div>
 
-      {/* Grid do calendario */}
       <div className="grid grid-cols-7 gap-1">
         {cells}
       </div>
 
-      {/* Footer: legenda + botao Hoje */}
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-1">
           <span className="text-[10px] text-slate-600 mr-1">Menos</span>
@@ -367,6 +367,8 @@ export default function Dashboard() {
   const [calendario, setCalendario] = useState([])
   const [atividades, setAtividades] = useState([])
   const [mes, setMes] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [selectedDay, setSelectedDay] = useState(null)
+  const [loadingAtividades, setLoadingAtividades] = useState(false)
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
@@ -381,7 +383,7 @@ export default function Dashboard() {
       .catch(() => setAtividades([]))
   }, [])
 
-  // Carrega calendário ao mudar de mês
+  // Carrega calendario ao mudar de mes
   useEffect(() => {
     const mesStr = `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
     dashboardService.getCalendario(mesStr)
@@ -389,10 +391,26 @@ export default function Dashboard() {
       .catch(() => setCalendario([]))
   }, [mes])
 
+  // Carrega atividades do dia selecionado
+  useEffect(() => {
+    if (selectedDay) {
+      setLoadingAtividades(true)
+      dashboardService.getAtividades(selectedDay)
+        .then(r => setAtividades(r.data || []))
+        .catch(() => setAtividades([]))
+        .finally(() => setLoadingAtividades(false))
+    } else {
+      dashboardService.getAtividades()
+        .then(r => setAtividades(r.data || []))
+        .catch(() => setAtividades([]))
+    }
+  }, [selectedDay])
+
   if (loading) return <Loader text="Carregando seu dashboard..." />
 
   const d = data || getMockData()
 
+  const hoje = new Date()
   const hojeF = formatarTempo(d.hoje_minutos)
   const semanaF = formatarTempo(d.semana_minutos)
   const mesF = formatarTempo(d.mes_minutos)
@@ -449,31 +467,77 @@ export default function Dashboard() {
         <ProgressBar value={metaPct} color={metaPct >= 100 ? 'success' : 'rainbow'} size="lg" />
       </Card>
 
-      {/* Calendário + Atividades Recentes */}
+      {/* Calendario + Atividades */}
       <div className="grid lg:grid-cols-3 gap-5">
-        <Card accent="#10b981" className="p-5 lg:col-span-2">
+        <Card accent={selectedDay ? '#6366f1' : '#10b981'} className="p-5 lg:col-span-2">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-accent-500/15 border border-accent-500/25 flex items-center justify-center">
-              <FiCalendar size={18} className="text-accent-400" />
+            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${
+              selectedDay ? 'bg-brand-500/15 border-brand-500/25' : 'bg-accent-500/15 border-accent-500/25'
+            }`}>
+              <FiCalendar size={18} className={selectedDay ? 'text-brand-400' : 'text-accent-400'} />
             </div>
-            <div>
+            <div className="flex-1">
               <h3 className="font-bold text-white">Calendario de Estudos</h3>
-              <p className="text-xs text-slate-500 mt-0.5">{semanaF} esta semana</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {selectedDay ? 'Clique no dia para ver detalhes' : `${semanaF} esta semana`}
+              </p>
             </div>
+            {selectedDay && (
+              <button
+                onClick={() => setSelectedDay(null)}
+                className="text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/20 px-2.5 py-1 rounded-lg transition-all"
+              >
+                Limpar
+              </button>
+            )}
           </div>
           <CalendarioMensal
             calendario={calendario}
             mes={mes}
-            onMesChange={setMes}
+            onMesChange={(newMes) => { setMes(newMes); setSelectedDay(null) }}
+            selectedDay={selectedDay}
+            onDayClick={setSelectedDay}
           />
         </Card>
 
-        <Card accent="#6366f1" className="p-5 flex flex-col">
+        <Card accent={selectedDay ? '#f59e0b' : '#6366f1'} className="p-5 flex flex-col">
           <h3 className="font-bold text-white flex items-center gap-2 mb-4">
-            <FiClock size={16} className="text-brand-400" /> Atividades Recentes
+            {selectedDay ? (
+              <>
+                <FiCalendar size={16} className="text-yellow-400" />
+                <span className="flex-1">
+                  {(() => {
+                    const d = new Date(selectedDay + 'T12:00:00')
+                    const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`
+                    if (selectedDay === hojeStr) return 'Hoje'
+                    return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+                  })()}
+                </span>
+              </>
+            ) : (
+              <>
+                <FiClock size={16} className="text-brand-400" />
+                <span>Atividades Recentes</span>
+              </>
+            )}
           </h3>
-          <div className="flex-1 overflow-y-auto max-h-[400px] scrollbar-thin">
-            <AtividadesRecentes atividades={atividades} />
+          <div className="flex-1 overflow-y-auto max-h-[420px] scrollbar-thin">
+            {loadingAtividades ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="w-5 h-5 border-2 border-brand-400/30 border-t-brand-400 rounded-full animate-spin" />
+              </div>
+            ) : atividades.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-500 text-sm">
+                  {selectedDay ? 'Nenhuma atividade neste dia.' : 'Nenhuma atividade registrada.'}
+                </p>
+                {!selectedDay && (
+                  <p className="text-slate-600 text-xs mt-1">Comece a estudar para ver seu historico!</p>
+                )}
+              </div>
+            ) : (
+              <AtividadesRecentes atividades={atividades} />
+            )}
           </div>
         </Card>
       </div>

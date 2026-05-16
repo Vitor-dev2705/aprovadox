@@ -154,12 +154,13 @@ exports.getCalendario = async (req, res) => {
   }
 };
 
-// Atividades recentes — últimas sessões com detalhes
+// Atividades recentes — últimas sessões com detalhes (filtro opcional por data)
 exports.getAtividades = async (req, res) => {
   try {
     const userId = req.userId;
-    const result = await pool.query(
-      `SELECT s.id, s.duracao_minutos, s.tecnica, s.data_inicio,
+    const { data } = req.query; // '2026-05-14' opcional
+
+    let query = `SELECT s.id, s.duracao_minutos, s.tecnica, s.data_inicio,
               m.nome as materia_nome, m.cor as materia_cor,
               c.titulo as conteudo_titulo,
               a.nome as assunto_nome
@@ -167,11 +168,17 @@ exports.getAtividades = async (req, res) => {
        LEFT JOIN materias m ON s.materia_id = m.id
        LEFT JOIN conteudos c ON s.conteudo_id = c.id
        LEFT JOIN assuntos a ON s.assunto_id = a.id
-       WHERE s.user_id = $1
-       ORDER BY s.data_inicio DESC
-       LIMIT 10`,
-      [userId]
-    );
+       WHERE s.user_id = $1`;
+    const params = [userId];
+
+    if (data) {
+      query += ` AND ${DATA_LOCAL}::date = $2::date`;
+      params.push(data);
+    }
+
+    query += ` ORDER BY s.data_inicio DESC LIMIT ${data ? 50 : 10}`;
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar atividades' });
