@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
+import { useStudyStore } from './store/studyStore'
 import Layout from './components/layout/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
@@ -32,10 +33,26 @@ const PublicRoute = ({ children }) => {
 
 export default function App() {
   const initTheme = useThemeStore(s => s.initTheme)
+  const isRunning = useStudyStore(s => s.isRunning)
+  const isPaused = useStudyStore(s => s.isPaused)
+  const seconds = useStudyStore(s => s.seconds)
+  const getFormattedTime = useStudyStore(s => s.getFormattedTime)
 
   useEffect(() => {
     initTheme()
   }, [initTheme])
+
+  // Mostra o cronômetro na aba do navegador
+  useEffect(() => {
+    if (isRunning) {
+      document.title = `⏱️ ${getFormattedTime()} | AprovadoX`
+    } else if (isPaused) {
+      document.title = `⏸️ ${getFormattedTime()} | AprovadoX`
+    } else {
+      document.title = 'AprovadoX'
+    }
+    return () => { document.title = 'AprovadoX' }
+  }, [isRunning, isPaused, seconds, getFormattedTime])
 
   return (
     <Routes>
