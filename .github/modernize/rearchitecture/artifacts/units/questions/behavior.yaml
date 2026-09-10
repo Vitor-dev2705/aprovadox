@@ -1,0 +1,13 @@
+unit: questions
+source_anchors: [backend/src/controllers/questoes.controller.js, frontend/src/pages/Questoes.jsx]
+side_effects:
+  - effect: "Store wrong questions, error notes and reviewed state for the user."
+    must_preserve: true
+branches:
+  - branch: "Question filters and review status remain available."
+    must_preserve: true
+error_paths:
+  - contract: "Question mutations remain user-scoped."
+    must_preserve: true
+concurrency:
+  model: request_scoped

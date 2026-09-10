@@ -1,0 +1,13 @@
+unit: study-execution
+source_anchors: [backend/src/controllers/sessoes.controller.js, frontend/src/pages/Cronometro.jsx]
+side_effects:
+  - effect: "Record duration, start/end timestamps, subject/topic and notes."
+    must_preserve: true
+branches:
+  - branch: "Running, paused and completed timer states remain recoverable in the client store."
+    must_preserve: true
+error_paths:
+  - contract: "Session records remain user-scoped and invalid IDs cannot be deleted."
+    must_preserve: true
+concurrency:
+  model: client_timer_plus_request_persistence

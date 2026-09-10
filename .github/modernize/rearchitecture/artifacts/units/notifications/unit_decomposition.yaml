@@ -1,0 +1,6 @@
+unit: notifications
+commit: false
+candidate_splits:
+  - candidate: "notification feed versus planner alerts"
+    drivers: [trigger_boundary, user_attention]
+    rationale: "Planner alerts should be derived and rate-limited separately."

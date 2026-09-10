@@ -1,0 +1,6 @@
+unit: subjects-content
+commit: false
+candidate_splits:
+  - candidate: "subject management versus content management"
+    drivers: [entity_boundary, page_complexity]
+    rationale: "The current page composes both, while content progress and review will grow independently."

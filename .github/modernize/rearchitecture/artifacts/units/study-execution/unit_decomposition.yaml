@@ -1,0 +1,6 @@
+unit: study-execution
+commit: false
+candidate_splits:
+  - candidate: "timer UI versus session persistence"
+    drivers: [state_boundary, reliability]
+    rationale: "Scheduling must consume completed sessions without coupling to timer rendering."

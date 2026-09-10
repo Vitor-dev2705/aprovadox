@@ -1,0 +1,13 @@
+unit: auth
+source_anchors: [backend/src/controllers/auth.controller.js, frontend/src/store/authStore.js]
+side_effects:
+  - effect: "Hash passwords, issue JWTs and persist client auth state."
+    must_preserve: true
+branches:
+  - branch: "Reject invalid credentials, duplicate email, invalid reset token and unauthorized access."
+    must_preserve: true
+error_paths:
+  - contract: "401 for invalid or missing tokens; validation errors remain explicit JSON."
+    must_preserve: true
+concurrency:
+  model: request_scoped

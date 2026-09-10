@@ -1,0 +1,5 @@
+unit: gamification
+bindings:
+  - source: backend/src/routes/gamificacao.routes.js
+    must_appear_in_target: true
+runtime_config: []

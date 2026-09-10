@@ -1,0 +1,9 @@
+unit: subjects-content
+bindings:
+  - source: backend/src/routes/materias.routes.js
+    must_appear_in_target: true
+  - source: backend/src/routes/conteudos.routes.js
+    must_appear_in_target: true
+runtime_config:
+  - name: DATABASE_URL
+    must_appear_in_target: true

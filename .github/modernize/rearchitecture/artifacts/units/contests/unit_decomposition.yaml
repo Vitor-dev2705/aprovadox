@@ -1,0 +1,6 @@
+unit: contests
+commit: false
+candidate_splits:
+  - candidate: "contest CRUD versus projection engine"
+    drivers: [calculation_boundary, data_read_model]
+    rationale: "CRUD mutates contest state; projections aggregate study evidence."

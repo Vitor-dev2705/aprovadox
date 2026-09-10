@@ -1,0 +1,13 @@
+unit: notifications
+source_anchors: [backend/src/controllers/notificacoes.controller.js, frontend/src/pages/Motivacional.jsx]
+side_effects:
+  - effect: "Return authenticated notification or motivational information."
+    must_preserve: true
+branches:
+  - branch: "Notifications remain informational and non-blocking."
+    must_preserve: true
+error_paths:
+  - contract: "Notification failures do not change planner state."
+    must_preserve: true
+concurrency:
+  model: request_scoped

@@ -1,0 +1,13 @@
+unit: study-dashboard
+source_anchors: [backend/src/controllers/dashboard.controller.js, frontend/src/pages/Dashboard.jsx, frontend/src/pages/Estatisticas.jsx]
+side_effects:
+  - effect: "Aggregate authenticated sessions, revisions, goals and charts using Brazil timezone rules."
+    must_preserve: true
+branches:
+  - branch: "Empty datasets return zero or null-safe dashboard values."
+    must_preserve: true
+error_paths:
+  - contract: "Aggregation failures return a server error without fabricated metrics."
+    must_preserve: true
+concurrency:
+  model: parallel_read_queries

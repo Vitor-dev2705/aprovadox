@@ -1,0 +1,6 @@
+unit: questions
+commit: false
+candidate_splits:
+  - candidate: "wrong-question register versus contest performance history"
+    drivers: [data_model_boundary, reporting]
+    rationale: "The current wrong-question flow is not yet a complete attempt/result history."

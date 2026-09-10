@@ -1,0 +1,13 @@
+unit: gamification
+source_anchors: [backend/src/controllers/gamificacao.controller.js, frontend/src/pages/Gamificacao.jsx]
+side_effects:
+  - effect: "Read status/missions and check medal conditions for the authenticated user."
+    must_preserve: true
+branches:
+  - branch: "Gamification remains optional and independent of planner calculations."
+    must_preserve: true
+error_paths:
+  - contract: "Gamification failures do not block core study records."
+    must_preserve: true
+concurrency:
+  model: request_scoped

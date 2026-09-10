@@ -1,0 +1,13 @@
+unit: weekly-planning
+source_anchors: [backend/src/controllers/planejamento.controller.js, frontend/src/pages/Planejamento.jsx]
+side_effects:
+  - effect: "Create, update, delete and clear weekly study blocks scoped to the user."
+    must_preserve: true
+branches:
+  - branch: "Validate day of week and required subject before persistence."
+    must_preserve: true
+error_paths:
+  - contract: "Invalid day or missing subject returns 400; unknown block returns 404."
+    must_preserve: true
+concurrency:
+  model: request_scoped

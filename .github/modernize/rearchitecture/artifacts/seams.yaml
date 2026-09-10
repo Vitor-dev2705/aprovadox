@@ -1,0 +1,18 @@
+seams:
+  - source: declared
+    source_loc: user_request
+    frozen_side: existing AprovadoX features
+    frozen_side_rule: "Do not remove or rewrite authentication, timer, existing CRUD, edital extraction or gamification unless a new planner contract requires an additive adapter."
+    protocol_shift: null
+    bridge_points: []
+    notes: "The requested evolution is incremental and must reuse existing routes, services, stores and visual primitives."
+  - source: inferred
+    source_loc: database/schema.sql:26
+    frozen_side: legacy data model
+    frozen_side_rule: "Keep legacy data_prova and existing subject/session/revision columns readable while adding planner fields."
+    protocol_shift: sql_extension
+    bridge_points:
+      - mapping_rule: "Read official contest date first, then estimated date, then legacy data_prova; write new values without deleting legacy data."
+        edge_cases: "No date remains a valid state and uses weekly goals/cycles."
+        idempotency_retry: "Use IF NOT EXISTS migrations and deterministic upserts."
+        fallback: "If a planner column/table is unavailable, return an explicit schema error rather than fabricate projections."

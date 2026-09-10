@@ -1,0 +1,26 @@
+modules:
+  - source_loc: backend/src/middleware/auth.js
+    kind: authentication_middleware
+    used_by_units: [auth, contests, subjects-content, study-dashboard, weekly-planning, study-execution, revision, questions, edital-extraction, gamification, notifications]
+    fields:
+      - name: req.userId
+        type: integer
+    migration_strategy: preserve_single_middleware
+  - source_loc: backend/src/config/database.js
+    kind: database_gateway
+    used_by_units: [auth, contests, subjects-content, study-dashboard, weekly-planning, study-execution, revision, questions, edital-extraction, gamification, notifications]
+    fields:
+      - name: query
+        type: function
+      - name: ensurePlannerSchema
+        type: function
+    migration_strategy: extend_only
+  - source_loc: frontend/src/services/api.js
+    kind: authenticated_http_client
+    used_by_units: [auth, contests, subjects-content, study-dashboard, weekly-planning, study-execution, revision, questions, edital-extraction, gamification, notifications]
+    fields:
+      - name: baseURL
+        type: string
+      - name: response_interceptor
+        type: function
+    migration_strategy: preserve_token_and_401_behavior

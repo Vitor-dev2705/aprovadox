@@ -1,0 +1,13 @@
+unit: contests
+source_anchors: [backend/src/controllers/concursos.controller.js, backend/src/controllers/projecao.controller.js, frontend/src/pages/Concursos.jsx]
+side_effects:
+  - effect: "Create, update, list and delete only the authenticated user's contests and derived planning metrics."
+    must_preserve: true
+branches:
+  - branch: "Official date overrides estimated date; no date remains supported."
+    must_preserve: true
+error_paths:
+  - contract: "Invalid contest input and database failures return explicit errors with request diagnostics."
+    must_preserve: true
+concurrency:
+  model: request_scoped

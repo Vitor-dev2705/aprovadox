@@ -1,0 +1,9 @@
+unit: contests
+bindings:
+  - source: backend/src/routes/concursos.routes.js
+    must_appear_in_target: true
+  - source: frontend/src/services/concurso.service.js
+    must_appear_in_target: true
+runtime_config:
+  - name: DATABASE_URL
+    must_appear_in_target: true

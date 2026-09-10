@@ -1,0 +1,6 @@
+unit: revision
+commit: false
+candidate_splits:
+  - candidate: "revision queue versus adaptive interval calculator"
+    drivers: [calculation_boundary, user_task]
+    rationale: "Queue display and interval recommendation have different change rates."

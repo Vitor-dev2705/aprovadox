@@ -1,0 +1,13 @@
+unit: edital-extraction
+source_anchors: [backend/src/controllers/extracao.controller.js]
+side_effects:
+  - effect: "Fetch or parse edital text and return detected subjects/topics for confirmation."
+    must_preserve: true
+branches:
+  - branch: "URL and pasted-text inputs remain supported; detection is advisory."
+    must_preserve: true
+error_paths:
+  - contract: "Fetch, PDF parsing and empty-result failures remain explicit."
+    must_preserve: true
+concurrency:
+  model: request_scoped_external_io

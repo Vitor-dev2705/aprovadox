@@ -1,0 +1,6 @@
+unit: study-dashboard
+commit: false
+candidate_splits:
+  - candidate: "today view versus historical statistics"
+    drivers: [read_model, user_task]
+    rationale: "Today needs actionable tasks; statistics needs historical aggregation."

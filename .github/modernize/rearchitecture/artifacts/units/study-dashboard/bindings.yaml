@@ -1,0 +1,7 @@
+unit: study-dashboard
+bindings:
+  - source: backend/src/routes/dashboard.routes.js
+    must_appear_in_target: true
+runtime_config:
+  - name: database_timezone
+    must_appear_in_target: true

@@ -1,0 +1,5 @@
+unit: study-execution
+bindings:
+  - source: backend/src/routes/sessoes.routes.js
+    must_appear_in_target: true
+runtime_config: []

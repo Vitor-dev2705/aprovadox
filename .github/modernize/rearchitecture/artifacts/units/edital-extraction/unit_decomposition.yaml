@@ -1,0 +1,6 @@
+unit: edital-extraction
+commit: false
+candidate_splits:
+  - candidate: "text extraction versus user confirmation/import"
+    drivers: [external_io, workflow_boundary]
+    rationale: "Parser output must remain reviewable before it mutates contest subjects."

@@ -1,0 +1,5 @@
+unit: weekly-planning
+bindings:
+  - source: backend/src/routes/planejamento.routes.js
+    must_appear_in_target: true
+runtime_config: []

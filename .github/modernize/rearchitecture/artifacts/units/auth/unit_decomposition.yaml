@@ -1,0 +1,6 @@
+unit: auth
+commit: false
+candidate_splits:
+  - candidate: "identity versus profile"
+    drivers: [separate_lifecycle, route_boundary]
+    rationale: "Profile updates and authentication share the controller but may evolve independently."

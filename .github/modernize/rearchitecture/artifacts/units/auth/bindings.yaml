@@ -1,0 +1,7 @@
+unit: auth
+bindings:
+  - source: backend/src/routes/auth.routes.js
+    must_appear_in_target: true
+runtime_config:
+  - name: JWT_SECRET
+    must_appear_in_target: true

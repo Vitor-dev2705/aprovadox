@@ -1,0 +1,26 @@
+contracts:
+  - source_loc: backend/src/routes/auth.routes.js
+    protocol: rest
+    stability: frozen
+    consumers: [frontend/src/store/authStore.js]
+    target_contract: "Bearer JWT authentication; register/login return user and token; protected profile/password endpoints keep current status and error shape."
+  - source_loc: backend/src/routes/concursos.routes.js
+    protocol: rest
+    stability: frozen
+    consumers: [frontend/src/services/concurso.service.js]
+    target_contract: "Contest CRUD remains under /api/concursos; official date takes precedence over estimated date; projection remains /:id/projecao."
+  - source_loc: backend/src/routes/materias.routes.js
+    protocol: rest
+    stability: frozen
+    consumers: [frontend/src/services/materia.service.js]
+    target_contract: "Subject CRUD keeps concurso_id, topics and content relationships; all responses remain JSON."
+  - source_loc: backend/src/routes/dashboard.routes.js
+    protocol: rest
+    stability: frozen
+    consumers: [frontend/src/services/dashboard.service.js]
+    target_contract: "Dashboard, statistics, calendar and activities remain authenticated and preserve existing response fields."
+  - source_loc: backend/src/routes/extracao.routes.js
+    protocol: rest
+    stability: frozen
+    consumers: [frontend/src/services/extracao.service.js]
+    target_contract: "Edital extraction accepts URL or pasted text and returns reviewable, non-authoritative detected subjects/topics."

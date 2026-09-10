@@ -1,0 +1,13 @@
+unit: revision
+source_anchors: [backend/src/controllers/revisoes.controller.js, frontend/src/pages/Revisoes.jsx]
+side_effects:
+  - effect: "List today's and calendar revisions and mark revisions complete."
+    must_preserve: true
+branches:
+  - branch: "Overdue and future revisions remain distinguishable."
+    must_preserve: true
+error_paths:
+  - contract: "Only the authenticated user's revisions can be completed."
+    must_preserve: true
+concurrency:
+  model: request_scoped

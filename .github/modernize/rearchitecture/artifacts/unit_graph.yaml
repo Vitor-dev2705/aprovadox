@@ -1,30 +1,44 @@
 units:
   - name: auth
-    source_anchors: [backend/src/routes/auth.routes.js, backend/src/controllers/auth.controller.js]
-    exported_signature: "JWT login/register/password flows"
+    source_anchors: [backend/src/routes/auth.routes.js, backend/src/controllers/auth.controller.js, frontend/src/pages/Login.jsx, frontend/src/pages/Register.jsx, frontend/src/pages/EsqueciSenha.jsx, frontend/src/pages/Perfil.jsx]
+    exported_signature: "JWT registration, login, recovery, profile and password flows"
   - name: contests
-    source_anchors: [backend/src/routes/concursos.routes.js, backend/src/controllers/concursos.controller.js, frontend/src/pages/Concursos.jsx]
+    source_anchors: [backend/src/routes/concursos.routes.js, backend/src/controllers/concursos.controller.js, backend/src/controllers/projecao.controller.js, frontend/src/pages/Concursos.jsx, frontend/src/pages/ConcursoDashboard.jsx]
     exported_signature: "contest CRUD and contest projection"
     shared_refs: [auth]
-  - name: subjects
-    source_anchors: [backend/src/routes/materias.routes.js, backend/src/controllers/materias.controller.js, frontend/src/pages/Materias.jsx]
-    exported_signature: "subject/topic/content CRUD"
+  - name: subjects-content
+    source_anchors: [backend/src/routes/materias.routes.js, backend/src/controllers/materias.controller.js, backend/src/routes/conteudos.routes.js, backend/src/controllers/conteudos.controller.js, frontend/src/pages/Materias.jsx]
+    exported_signature: "subject, topic and content CRUD"
     shared_refs: [auth]
   - name: study-dashboard
-    source_anchors: [backend/src/routes/dashboard.routes.js, backend/src/controllers/dashboard.controller.js, frontend/src/pages/Dashboard.jsx]
+    source_anchors: [backend/src/routes/dashboard.routes.js, backend/src/controllers/dashboard.controller.js, frontend/src/pages/Dashboard.jsx, frontend/src/pages/Estatisticas.jsx]
     exported_signature: "overview, statistics, calendar and today activities"
+    shared_refs: [auth, study-execution, revision]
   - name: weekly-planning
     source_anchors: [backend/src/routes/planejamento.routes.js, backend/src/controllers/planejamento.controller.js, frontend/src/pages/Planejamento.jsx]
     exported_signature: "weekly study-cycle blocks"
+    shared_refs: [subjects-content, auth]
   - name: study-execution
-    source_anchors: [backend/src/routes/sessoes.routes.js, frontend/src/pages/Cronometro.jsx]
-    exported_signature: "study session recording"
+    source_anchors: [backend/src/routes/sessoes.routes.js, backend/src/controllers/sessoes.controller.js, frontend/src/pages/Cronometro.jsx]
+    exported_signature: "study session recording and session statistics"
+    shared_refs: [subjects-content, auth]
   - name: revision
-    source_anchors: [backend/src/routes/revisoes.routes.js, frontend/src/pages/Revisoes.jsx]
+    source_anchors: [backend/src/routes/revisoes.routes.js, backend/src/controllers/revisoes.controller.js, frontend/src/pages/Revisoes.jsx]
     exported_signature: "spaced revision queue"
+    shared_refs: [subjects-content, auth]
   - name: questions
-    source_anchors: [backend/src/routes/questoes.routes.js, frontend/src/pages/Questoes.jsx]
+    source_anchors: [backend/src/routes/questoes.routes.js, backend/src/controllers/questoes.controller.js, frontend/src/pages/Questoes.jsx]
     exported_signature: "question error and performance tracking"
+    shared_refs: [subjects-content, auth]
   - name: edital-extraction
-    source_anchors: [backend/src/routes/extracao.routes.js, frontend/src/pages/Concursos.jsx]
+    source_anchors: [backend/src/routes/extracao.routes.js, backend/src/controllers/extracao.controller.js]
     exported_signature: "extract subjects from public edital URL or text"
+    shared_refs: [contests, subjects-content]
+  - name: gamification
+    source_anchors: [backend/src/routes/gamificacao.routes.js, backend/src/controllers/gamificacao.controller.js, frontend/src/pages/Gamificacao.jsx]
+    exported_signature: "gamification status, missions and medal checks"
+    shared_refs: [auth, study-execution]
+  - name: notifications
+    source_anchors: [backend/src/routes/notificacoes.routes.js, backend/src/controllers/notificacoes.controller.js, frontend/src/pages/Motivacional.jsx]
+    exported_signature: "authenticated notification feed"
+    shared_refs: [auth]

@@ -1,0 +1,13 @@
+unit: subjects-content
+source_anchors: [backend/src/controllers/materias.controller.js, backend/src/controllers/conteudos.controller.js, frontend/src/pages/Materias.jsx]
+side_effects:
+  - effect: "Maintain subject ownership, contest association, topic completion and ordered content."
+    must_preserve: true
+branches:
+  - branch: "Legacy subjects without contest remain readable; planner creation prefers contest linkage."
+    must_preserve: true
+error_paths:
+  - contract: "Unauthorized subject or content IDs are not updated or deleted."
+    must_preserve: true
+concurrency:
+  model: request_scoped

@@ -1,0 +1,5 @@
+unit: notifications
+bindings:
+  - source: backend/src/routes/notificacoes.routes.js
+    must_appear_in_target: true
+runtime_config: []

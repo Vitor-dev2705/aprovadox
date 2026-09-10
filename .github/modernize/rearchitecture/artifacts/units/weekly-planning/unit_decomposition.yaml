@@ -1,0 +1,6 @@
+unit: weekly-planning
+commit: false
+candidate_splits:
+  - candidate: "manual weekly blocks versus generated adaptive cycle"
+    drivers: [algorithm_boundary, mutation_strategy]
+    rationale: "Existing editable blocks remain stable while generated plans can be recalculated."

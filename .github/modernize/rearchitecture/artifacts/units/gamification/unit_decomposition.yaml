@@ -1,0 +1,6 @@
+unit: gamification
+commit: false
+candidate_splits:
+  - candidate: "progress signals versus reward catalog"
+    drivers: [optional_feature, read_model]
+    rationale: "Planner progress can feed gamification without making the domains inseparable."

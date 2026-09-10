@@ -1,0 +1,23 @@
+flows:
+  - source_loc: frontend/src/store/authStore.js:6
+    from_unit: auth
+    to_units: [contests, subjects-content, study-dashboard, weekly-planning, study-execution, revision, questions, edital-extraction, gamification, notifications]
+    state_key: token
+    pairing: matched
+    must_preserve: "Persist token and restore Authorization header before authenticated requests."
+    verification_hint: "Reload an authenticated route and confirm API calls keep the Bearer token."
+  - source_loc: backend/src/middleware/auth.js:14
+    from_unit: auth
+    to_units: [contests, subjects-content, study-dashboard, weekly-planning, study-execution, revision, questions, edital-extraction, gamification, notifications]
+    state_key: req.userId
+    pairing: matched
+    must_preserve: "All reads and writes remain scoped to the authenticated user."
+    verification_hint: "Attempt cross-user IDs and confirm 404/empty results."
+  - source_loc: backend/src/controllers/concursos.controller.js
+    from_unit: contests
+    to_units: [subjects-content, study-dashboard, weekly-planning, revision, questions, edital-extraction]
+    state_key: concurso_id
+    pairing: partial
+    must_preserve: "Subjects, topics, sessions, revisions and question records remain attributable to one contest."
+    must_confirm: runtime
+    verification_hint: "Create two contests with same-named subjects and verify dashboards never aggregate them."

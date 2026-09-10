@@ -1,0 +1,7 @@
+unit: edital-extraction
+bindings:
+  - source: backend/src/routes/extracao.routes.js
+    must_appear_in_target: true
+runtime_config:
+  - name: public edital URL access
+    must_appear_in_target: true
