@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   FiTarget, FiPlus, FiCalendar, FiEdit2, FiTrash2, FiBook,
@@ -12,12 +13,17 @@ import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
 import EmptyState from '../components/ui/EmptyState'
 import Loader from '../components/ui/Loader'
 import PageHeader from '../components/ui/PageHeader'
 import toast from 'react-hot-toast'
 
-const EMPTY_FORM = { nome: '', banca: '', cargo: '', data_prova: '', edital_url: '' }
+const EMPTY_FORM = {
+  nome: '', orgao: '', banca: '', cargo: '', data_prova_estimada: '',
+  data_prova_oficial: '', status: 'estudando', numero_questoes: '',
+  peso_prova: '', observacoes: '', edital_url: ''
+}
 const CORES = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#ef4444','#06b6d4']
 
 function DaysRemaining({ date }) {
@@ -30,6 +36,7 @@ function DaysRemaining({ date }) {
 }
 
 export default function Concursos() {
+  const navigate = useNavigate()
   const [concursos, setConcursos] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -61,8 +68,11 @@ export default function Concursos() {
   const openEdit = (c) => {
     setEditItem(c)
     setForm({
-      nome: c.nome, banca: c.banca || '', cargo: c.cargo || '',
-      data_prova: c.data_prova?.split('T')[0] || '',
+      nome: c.nome, orgao: c.orgao || '', banca: c.banca || '', cargo: c.cargo || '',
+      data_prova_estimada: c.data_prova_estimada?.split('T')[0] || (!c.data_prova_oficial ? c.data_prova?.split('T')[0] || '' : ''),
+      data_prova_oficial: c.data_prova_oficial?.split('T')[0] || '',
+      status: c.status || 'estudando', numero_questoes: c.numero_questoes || '',
+      peso_prova: c.peso_prova || '', observacoes: c.observacoes || '',
       edital_url: c.edital_url || ''
     })
     setModalOpen(true)
@@ -211,7 +221,7 @@ export default function Concursos() {
                       <FiTarget size={18} className="text-brand-400" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-white text-sm leading-tight">{c.nome}</h3>
+                      <button onClick={() => navigate(`/concursos/${c.id}`)} className="font-bold text-white text-sm leading-tight text-left hover:text-brand-300">{c.nome}</button>
                       {c.banca && <p className="text-xs text-slate-500">{c.banca}</p>}
                     </div>
                   </div>
@@ -233,21 +243,41 @@ export default function Concursos() {
                 )}
 
                 <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-                  {c.data_prova && (
+                  {(c.data_prova_oficial || c.data_prova_estimada || c.data_prova) && (
                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
                       <FiCalendar size={12} />
-                      <span>{new Date(c.data_prova).toLocaleDateString('pt-BR')}</span>
+                      <span>{new Date(c.data_prova_oficial || c.data_prova_estimada || c.data_prova).toLocaleDateString('pt-BR')}</span>
+                      {!c.data_prova_oficial && <span className="text-[10px] text-yellow-400 font-bold">ESTIMATIVA</span>}
                     </div>
                   )}
-                  <DaysRemaining date={c.data_prova} />
+                  <DaysRemaining date={c.data_prova_oficial || c.data_prova_estimada || c.data_prova} />
                 </div>
 
                 {c.total_materias > 0 && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <FiBook size={12} />
-                    <span>{c.total_materias} matérias vinculadas</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <FiBook size={12} />
+                      <span>{c.total_materias} matérias vinculadas</span>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                        <span>Cobertura do conteúdo</span>
+                        <span>{c.total_topicos ? Math.round(c.topicos_concluidos / c.total_topicos * 100) : 0}%</span>
+                      </div>
+                      <div className="h-1.5 bg-dark-500 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-brand-500 to-accent-500 rounded-full" style={{ width: `${c.total_topicos ? Math.min(100, c.topicos_concluidos / c.total_topicos * 100) : 0}%` }} />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      {Number(c.horas_estudadas || 0).toFixed(1)}h estudadas · {Number(c.horas_semanais_planejadas || 0).toFixed(1)}h/semana planejadas
+                    </p>
                   </div>
                 )}
+
+                <button onClick={() => navigate(`/concursos/${c.id}`)}
+                  className="text-xs text-brand-300 hover:text-brand-200 text-left">
+                  Ver projeção inteligente →
+                </button>
 
                 {/* BOTÃO IMPORTAR EDITAL */}
                 <Button
@@ -271,10 +301,31 @@ export default function Concursos() {
           <Input label="Nome do Concurso" placeholder="Ex: Concurso TJ-SP 2024"
             value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required />
           <div className="grid grid-cols-2 gap-3">
+            <Input label="Órgão" placeholder="Ex: Banco do Brasil" value={form.orgao} onChange={e => setForm({...form, orgao: e.target.value})} />
             <Input label="Banca" placeholder="Ex: FCC, CESPE" value={form.banca} onChange={e => setForm({...form, banca: e.target.value})} />
-            <Input label="Cargo" placeholder="Ex: Analista" value={form.cargo} onChange={e => setForm({...form, cargo: e.target.value})} />
           </div>
-          <Input label="Data da Prova" type="date" value={form.data_prova} onChange={e => setForm({...form, data_prova: e.target.value})} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Cargo" placeholder="Ex: Analista" value={form.cargo} onChange={e => setForm({...form, cargo: e.target.value})} />
+            <Select label="Status" options={[
+              { value: 'estudando', label: 'Estudando' },
+              { value: 'aguardando_edital', label: 'Aguardando edital' },
+              { value: 'edital_publicado', label: 'Edital publicado' },
+              { value: 'prova_marcada', label: 'Prova marcada' },
+              { value: 'finalizado', label: 'Finalizado' }
+            ]} value={form.status} onChange={e => setForm({...form, status: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Input label="Data provável" type="date" value={form.data_prova_estimada} onChange={e => setForm({...form, data_prova_estimada: e.target.value})} />
+              <p className="text-[10px] text-yellow-400 mt-1">ESTIMATIVA — altere quando o edital sair.</p>
+            </div>
+            <Input label="Data oficial" type="date" value={form.data_prova_oficial} onChange={e => setForm({...form, data_prova_oficial: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Número de questões" type="number" min="1" value={form.numero_questoes} onChange={e => setForm({...form, numero_questoes: e.target.value})} />
+            <Input label="Peso da prova" type="number" min="0" step="0.1" value={form.peso_prova} onChange={e => setForm({...form, peso_prova: e.target.value})} />
+          </div>
+          <textarea className="input-field text-sm resize-none h-20" placeholder="Observações do concurso" value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} />
           <Input label="Link do Edital (PDF ou página)" placeholder="https://..." icon={<FiExternalLink size={15} />}
             value={form.edital_url} onChange={e => setForm({...form, edital_url: e.target.value})} />
 

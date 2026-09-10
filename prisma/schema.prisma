@@ -41,9 +41,16 @@ model Concurso {
   id        Int       @id @default(autoincrement())
   userId    Int       @map("user_id")
   nome      String
+  orgao     String?
   banca     String?
   cargo     String?
   dataProva DateTime? @map("data_prova") @db.Date
+  dataProvaEstimada DateTime? @map("data_prova_estimada") @db.Date
+  dataProvaOficial DateTime? @map("data_prova_oficial") @db.Date
+  status String @default("estudando")
+  numeroQuestoes Int? @map("numero_questoes")
+  pesoProva Decimal? @map("peso_prova") @db.Decimal(8, 2)
+  observacoes String?
   editalUrl String?   @map("edital_url")
   ativo     Boolean   @default(true)
   createdAt DateTime  @default(now()) @map("created_at")
@@ -62,6 +69,9 @@ model Materia {
   cor              String  @default("#6366f1")
   metaSemanalHoras Decimal @default(5) @map("meta_semanal_horas") @db.Decimal(5, 2)
   peso             Int     @default(1)
+  prioridade       String  @default("media")
+  dominio          Decimal @default(0) @db.Decimal(5, 2)
+  horasEstimadas   Decimal @default(0) @map("horas_estimadas") @db.Decimal(7, 2)
   createdAt        DateTime @default(now()) @map("created_at")
 
   user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)

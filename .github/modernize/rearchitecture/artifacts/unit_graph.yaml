@@ -1,0 +1,30 @@
+units:
+  - name: auth
+    source_anchors: [backend/src/routes/auth.routes.js, backend/src/controllers/auth.controller.js]
+    exported_signature: "JWT login/register/password flows"
+  - name: contests
+    source_anchors: [backend/src/routes/concursos.routes.js, backend/src/controllers/concursos.controller.js, frontend/src/pages/Concursos.jsx]
+    exported_signature: "contest CRUD and contest projection"
+    shared_refs: [auth]
+  - name: subjects
+    source_anchors: [backend/src/routes/materias.routes.js, backend/src/controllers/materias.controller.js, frontend/src/pages/Materias.jsx]
+    exported_signature: "subject/topic/content CRUD"
+    shared_refs: [auth]
+  - name: study-dashboard
+    source_anchors: [backend/src/routes/dashboard.routes.js, backend/src/controllers/dashboard.controller.js, frontend/src/pages/Dashboard.jsx]
+    exported_signature: "overview, statistics, calendar and today activities"
+  - name: weekly-planning
+    source_anchors: [backend/src/routes/planejamento.routes.js, backend/src/controllers/planejamento.controller.js, frontend/src/pages/Planejamento.jsx]
+    exported_signature: "weekly study-cycle blocks"
+  - name: study-execution
+    source_anchors: [backend/src/routes/sessoes.routes.js, frontend/src/pages/Cronometro.jsx]
+    exported_signature: "study session recording"
+  - name: revision
+    source_anchors: [backend/src/routes/revisoes.routes.js, frontend/src/pages/Revisoes.jsx]
+    exported_signature: "spaced revision queue"
+  - name: questions
+    source_anchors: [backend/src/routes/questoes.routes.js, frontend/src/pages/Questoes.jsx]
+    exported_signature: "question error and performance tracking"
+  - name: edital-extraction
+    source_anchors: [backend/src/routes/extracao.routes.js, frontend/src/pages/Concursos.jsx]
+    exported_signature: "extract subjects from public edital URL or text"

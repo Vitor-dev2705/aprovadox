@@ -6,4 +6,5 @@ export const concursoService = {
   create: (data) => api.post('/concursos', data),
   update: (id, data) => api.put(`/concursos/${id}`, data),
   delete: (id) => api.delete(`/concursos/${id}`),
+  getProjection: (id) => api.get(`/concursos/${id}/projecao`),
 }

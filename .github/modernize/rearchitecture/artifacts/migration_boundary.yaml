@@ -1,0 +1,15 @@
+strategy: additive_extension
+user_intent:
+  cleanup_required: false
+  rationale: "Preserve the functioning AprovadoX study platform while adding intelligent contest planning."
+must_rewrite:
+  - "Contest data contract: official versus estimated dates and planning metadata."
+  - "Contest overview query: derived coverage, hours and topic metrics."
+  - "Contest-specific projection endpoint and dashboard."
+copy_as_is:
+  - "JWT authentication and user scoping middleware."
+  - "Existing study session, revision, subject and edital extraction flows."
+legacy_allowed_to_remain:
+  - "Legacy data_prova field for backward compatibility."
+defer_cleanup:
+  - "Replace duplicated Prisma/SQL access with one ORM strategy."

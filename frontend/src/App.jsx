@@ -11,6 +11,7 @@ import EsqueciSenha from './pages/EsqueciSenha'
 import Dashboard from './pages/Dashboard'
 import Cronometro from './pages/Cronometro'
 import Concursos from './pages/Concursos'
+import ConcursoDashboard from './pages/ConcursoDashboard'
 import Materias from './pages/Materias'
 import Revisoes from './pages/Revisoes'
 import Estatisticas from './pages/Estatisticas'
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/cronometro" element={<Cronometro />} />
         <Route path="/concursos" element={<Concursos />} />
+        <Route path="/concursos/:id" element={<ConcursoDashboard />} />
         <Route path="/materias" element={<Materias />} />
         <Route path="/revisoes" element={<Revisoes />} />
         <Route path="/estatisticas" element={<Estatisticas />} />

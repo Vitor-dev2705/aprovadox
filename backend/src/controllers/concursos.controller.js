@@ -8,7 +8,18 @@ exports.getAll = async (req, res) => {
     const result = await pool.query(
       `SELECT c.*,
         (SELECT COUNT(*) FROM materias WHERE concurso_id = c.id) as total_materias,
-        CASE WHEN c.data_prova IS NOT NULL THEN c.data_prova - ${TODAY_BR} ELSE NULL END as dias_restantes
+        CASE WHEN COALESCE(c.data_prova_oficial, c.data_prova_estimada, c.data_prova) IS NOT NULL
+          THEN COALESCE(c.data_prova_oficial, c.data_prova_estimada, c.data_prova) - ${TODAY_BR}
+          ELSE NULL END as dias_restantes,
+        COALESCE((SELECT SUM(m.horas_estimadas) FROM materias m WHERE m.concurso_id = c.id), 0) as horas_necessarias,
+        COALESCE((SELECT SUM(s.duracao_minutos) / 60.0 FROM sessoes_estudo s
+          JOIN materias m ON m.id = s.materia_id
+          WHERE m.concurso_id = c.id), 0) as horas_estudadas,
+        COALESCE((SELECT SUM(m.meta_semanal_horas) FROM materias m WHERE m.concurso_id = c.id), 0) as horas_semanais_planejadas,
+        COALESCE((SELECT COUNT(*) FROM assuntos a JOIN materias m ON m.id = a.materia_id
+          WHERE m.concurso_id = c.id), 0) as total_topicos,
+        COALESCE((SELECT COUNT(*) FROM assuntos a JOIN materias m ON m.id = a.materia_id
+          WHERE m.concurso_id = c.id AND a.concluido = true), 0) as topicos_concluidos
       FROM concursos c WHERE c.user_id = $1 ORDER BY c.data_prova ASC NULLS LAST`,
       [req.userId]
     );
@@ -36,13 +47,22 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { nome, banca, cargo, data_prova, edital_url } = req.body;
+    const {
+      nome, orgao, banca, cargo, data_prova, data_prova_estimada,
+      data_prova_oficial, status, numero_questoes, peso_prova, observacoes, edital_url
+    } = req.body;
     if (!nome || !nome.trim()) {
       return res.status(400).json({ error: 'Nome do concurso é obrigatório' });
     }
     const result = await pool.query(
-      'INSERT INTO concursos (user_id, nome, banca, cargo, data_prova, edital_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.userId, nome, banca, cargo, data_prova, edital_url]
+      `INSERT INTO concursos
+        (user_id, nome, orgao, banca, cargo, data_prova, data_prova_estimada,
+         data_prova_oficial, status, numero_questoes, peso_prova, observacoes, edital_url)
+       VALUES ($1,$2,$3,$4,$5,COALESCE($6,$7),$7,$6,COALESCE($8,'estudando'),$9,$10,$11,$12)
+       RETURNING *`,
+      [req.userId, nome.trim(), orgao || null, banca || null, cargo || null, data_prova_oficial || null,
+        data_prova_estimada || data_prova || null, status, numero_questoes || null, peso_prova || null,
+        observacoes || null, edital_url || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -52,10 +72,20 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { nome, banca, cargo, data_prova, edital_url, ativo } = req.body;
+    const {
+      nome, orgao, banca, cargo, data_prova, data_prova_estimada,
+      data_prova_oficial, status, numero_questoes, peso_prova, observacoes, edital_url, ativo
+    } = req.body;
     const result = await pool.query(
-      'UPDATE concursos SET nome=$1, banca=$2, cargo=$3, data_prova=$4, edital_url=$5, ativo=COALESCE($6, ativo) WHERE id=$7 AND user_id=$8 RETURNING *',
-      [nome, banca, cargo, data_prova, edital_url, ativo, req.params.id, req.userId]
+      `UPDATE concursos SET nome=COALESCE($1,nome), orgao=$2, banca=$3, cargo=$4,
+       data_prova=COALESCE($5, data_prova_oficial, data_prova_estimada, data_prova),
+       data_prova_estimada=$6, data_prova_oficial=$7, status=COALESCE($8,status),
+       numero_questoes=$9, peso_prova=$10, observacoes=$11, edital_url=$12,
+       ativo=COALESCE($13, ativo)
+       WHERE id=$14 AND user_id=$15 RETURNING *`,
+      [nome, orgao || null, banca || null, cargo || null, data_prova || null,
+        data_prova_estimada || null, data_prova_oficial || null, status, numero_questoes || null,
+        peso_prova || null, observacoes || null, edital_url || null, ativo, req.params.id, req.userId]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Concurso não encontrado' });
     res.json(result.rows[0]);

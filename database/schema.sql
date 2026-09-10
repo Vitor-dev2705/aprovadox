@@ -27,13 +27,28 @@ CREATE TABLE IF NOT EXISTS concursos (
   id         SERIAL PRIMARY KEY,
   user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
   nome       VARCHAR(255) NOT NULL,
+  orgao      VARCHAR(255),
   banca      VARCHAR(255),
   cargo      VARCHAR(255),
   data_prova DATE,
+  data_prova_estimada DATE,
+  data_prova_oficial DATE,
+  status     VARCHAR(40) NOT NULL DEFAULT 'estudando',
+  numero_questoes INTEGER,
+  peso_prova  DECIMAL(8,2),
+  observacoes TEXT,
   edital_url TEXT,
   ativo      BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS orgao VARCHAR(255);
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS data_prova_estimada DATE;
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS data_prova_oficial DATE;
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS status VARCHAR(40) NOT NULL DEFAULT 'estudando';
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS numero_questoes INTEGER;
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS peso_prova DECIMAL(8,2);
+ALTER TABLE concursos ADD COLUMN IF NOT EXISTS observacoes TEXT;
 
 CREATE TABLE IF NOT EXISTS materias (
   id                  SERIAL PRIMARY KEY,
@@ -43,8 +58,15 @@ CREATE TABLE IF NOT EXISTS materias (
   cor                 VARCHAR(7) DEFAULT '#6366f1',
   meta_semanal_horas  DECIMAL(5,2) DEFAULT 5,
   peso                INTEGER DEFAULT 1,
+  prioridade          VARCHAR(10) DEFAULT 'media',
+  dominio             DECIMAL(5,2) DEFAULT 0,
+  horas_estimadas     DECIMAL(7,2) DEFAULT 0,
   created_at          TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE materias ADD COLUMN IF NOT EXISTS prioridade VARCHAR(10) DEFAULT 'media';
+ALTER TABLE materias ADD COLUMN IF NOT EXISTS dominio DECIMAL(5,2) DEFAULT 0;
+ALTER TABLE materias ADD COLUMN IF NOT EXISTS horas_estimadas DECIMAL(7,2) DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS assuntos (
   id          SERIAL PRIMARY KEY,
@@ -140,6 +162,47 @@ CREATE TABLE IF NOT EXISTS planejamento_semanal (
   horas           DECIMAL(4,2) NOT NULL,
   horario_inicio  TIME,
   horario_fim     TIME
+);
+
+CREATE TABLE IF NOT EXISTS preferencias_estudo (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  horas_dia DECIMAL(4,2) DEFAULT 2,
+  dias_disponiveis INTEGER[] DEFAULT '{1,2,3,4,5,6}',
+  dia_descanso INTEGER DEFAULT 0,
+  horario_preferencial TIME DEFAULT '19:00',
+  max_materias_dia INTEGER DEFAULT 3,
+  sessao_minutos INTEGER DEFAULT 45,
+  sessao_maxima_minutos INTEGER DEFAULT 120,
+  intervalo_minutos INTEGER DEFAULT 15,
+  margem_seguranca DECIMAL(4,2) DEFAULT 0.15,
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS simulados (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  concurso_id INTEGER REFERENCES concursos(id) ON DELETE CASCADE,
+  data DATE NOT NULL DEFAULT CURRENT_DATE,
+  quantidade_questoes INTEGER NOT NULL,
+  acertos INTEGER NOT NULL DEFAULT 0,
+  tempo_minutos INTEGER,
+  nota_estimada DECIMAL(7,2),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS resultados_questoes (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  concurso_id INTEGER REFERENCES concursos(id) ON DELETE CASCADE,
+  materia_id INTEGER REFERENCES materias(id) ON DELETE CASCADE,
+  assunto VARCHAR(255),
+  banca VARCHAR(255),
+  data DATE NOT NULL DEFAULT CURRENT_DATE,
+  quantidade INTEGER NOT NULL,
+  acertos INTEGER NOT NULL DEFAULT 0,
+  erros INTEGER GENERATED ALWAYS AS (quantidade - acertos) STORED,
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS medalhas (

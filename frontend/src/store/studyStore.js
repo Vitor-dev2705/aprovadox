@@ -1,12 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-/**
- * Store GLOBAL do cronômetro de estudos.
- * - Funciona em segundo plano: navegar para outras páginas NÃO pausa
- * - Persistência em localStorage: refresh / fechar aba mantém o tempo
- * - Cálculo baseado em Date — preciso mesmo se a aba fica em background
- */
+
 export const useStudyStore = create(
   persist(
     (set, get) => ({
