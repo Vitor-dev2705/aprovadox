@@ -73,7 +73,8 @@ exports.create = async (req, res) => {
       `INSERT INTO concursos
         (user_id, nome, orgao, banca, cargo, data_prova, data_prova_estimada,
          data_prova_oficial, status, numero_questoes, peso_prova, observacoes, edital_url)
-       VALUES ($1,$2,$3,$4,$5,COALESCE($6,$7),$7,$6,COALESCE($8,'estudando'),$9,$10,$11,$12)
+       VALUES ($1,$2,$3,$4,$5,COALESCE($6::date,$7::date),$7::date,$6::date,
+         COALESCE($8::varchar,'estudando'),$9::integer,$10::numeric,$11::text,$12::text)
        RETURNING *`,
       [req.userId, nome.trim(), orgao || null, banca || null, cargo || null, data_prova_oficial || null,
         data_prova_estimada || data_prova || null, status, numero_questoes || null, peso_prova || null,
