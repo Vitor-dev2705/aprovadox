@@ -95,6 +95,12 @@ model Conteudo {
   url         String?
   descricao   String?
   visualizado Boolean  @default(false)
+  status      String   @default("nao_iniciado")
+  dificuldade String   @default("media")
+  horasEstimadas Decimal @default(0) @map("horas_estimadas") @db.Decimal(7, 2)
+  progresso   Decimal  @default(0) @db.Decimal(5, 2)
+  ultimaRevisao DateTime? @map("ultima_revisao") @db.Date
+  proximaRevisao DateTime? @map("proxima_revisao") @db.Date
   ordem       Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -110,6 +116,9 @@ model Assunto {
   conteudoId Int?    @map("conteudo_id")
   nome       String
   concluido  Boolean @default(false)
+  status     String  @default("nao_iniciado")
+  dificuldade String @default("media")
+  progresso  Decimal @default(0) @db.Decimal(5, 2)
   ordem      Int     @default(0)
 
   materia  Materia        @relation(fields: [materiaId], references: [id], onDelete: Cascade)

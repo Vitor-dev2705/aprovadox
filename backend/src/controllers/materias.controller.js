@@ -27,13 +27,16 @@ exports.getById = async (req, res) => {
     const result = await pool.query(
       `SELECT m.*,
         (SELECT json_agg(json_build_object(
-            'id', a.id, 'nome', a.nome, 'concluido', a.concluido,
-            'ordem', a.ordem, 'conteudo_id', a.conteudo_id
-          ) ORDER BY a.ordem)
-         FROM assuntos a WHERE a.materia_id = m.id) as assuntos,
-        (SELECT json_agg(json_build_object(
             'id', c.id, 'titulo', c.titulo, 'tipo', c.tipo,
-            'url', c.url, 'descricao', c.descricao, 'ordem', c.ordem
+            'url', c.url, 'descricao', c.descricao, 'status', c.status,
+            'progresso', c.progresso, 'ordem', c.ordem,
+            'assuntos', COALESCE((
+              SELECT json_agg(json_build_object(
+                'id', a.id, 'nome', a.nome, 'concluido', a.concluido,
+                'status', a.status, 'progresso', a.progresso, 'ordem', a.ordem
+              ) ORDER BY a.ordem)
+              FROM assuntos a WHERE a.conteudo_id = c.id
+            ), '[]'::json)
           ) ORDER BY c.ordem)
          FROM conteudos c WHERE c.materia_id = m.id) as conteudos
       FROM materias m WHERE m.id = $1 AND m.user_id = $2`,
@@ -47,12 +50,15 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  let client;
   try {
+    client = await pool.connect();
     const { nome, cor, meta_semanal_horas, concurso_id, peso, assuntos, conteudos } = req.body;
     if (!nome || !nome.trim()) {
       return res.status(400).json({ error: 'Nome da matéria é obrigatório' });
     }
-    const result = await pool.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       'INSERT INTO materias (user_id, concurso_id, nome, cor, meta_semanal_horas, peso) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [req.userId, concurso_id, nome, cor || '#6366f1', meta_semanal_horas || 5, peso || 1]
     );
@@ -61,26 +67,42 @@ exports.create = async (req, res) => {
     // Assuntos (legado, mantido)
     if (assuntos && assuntos.length) {
       for (let i = 0; i < assuntos.length; i++) {
-        await pool.query('INSERT INTO assuntos (materia_id, nome, ordem) VALUES ($1, $2, $3)', [materia.id, assuntos[i], i]);
+        await client.query('INSERT INTO assuntos (materia_id, nome, ordem) VALUES ($1, $2, $3)', [materia.id, assuntos[i], i]);
       }
     }
 
     // Conteúdos (NOVO — criado junto com a matéria)
     if (conteudos && conteudos.length) {
       for (let i = 0; i < conteudos.length; i++) {
-        const titulo = String(conteudos[i] || '').trim();
+        const item = typeof conteudos[i] === 'string' ? { titulo: conteudos[i] } : (conteudos[i] || {});
+        const titulo = String(item.titulo || item.nome || '').trim();
         if (!titulo) continue;
-        await pool.query(
+        const contentResult = await client.query(
           `INSERT INTO conteudos (user_id, materia_id, titulo, tipo, ordem)
            VALUES ($1, $2, $3, 'anotacao', $4)`,
           [req.userId, materia.id, titulo, i]
         );
+        const conteudoId = contentResult.rows[0].id;
+        if (Array.isArray(item.assuntos)) {
+          for (let j = 0; j < item.assuntos.length; j++) {
+            const assunto = typeof item.assuntos[j] === 'string' ? item.assuntos[j] : item.assuntos[j]?.nome;
+            if (!assunto?.trim()) continue;
+            await client.query(
+              'INSERT INTO assuntos (materia_id, conteudo_id, nome, ordem) VALUES ($1, $2, $3, $4)',
+              [materia.id, conteudoId, assunto.trim(), j]
+            );
+          }
+        }
       }
     }
 
+    await client.query('COMMIT');
     res.status(201).json(materia);
   } catch (err) {
+    if (client) await client.query('ROLLBACK');
     res.status(500).json({ error: 'Erro ao criar matéria' });
+  } finally {
+    if (client) client.release();
   }
 };
 
@@ -129,7 +151,9 @@ exports.addAssunto = async (req, res) => {
 exports.toggleAssunto = async (req, res) => {
   try {
     const result = await pool.query(
-      `UPDATE assuntos SET concluido = NOT concluido
+      `UPDATE assuntos SET concluido = NOT concluido,
+        status = CASE WHEN concluido = false THEN 'concluido' ELSE 'estudando' END,
+        progresso = CASE WHEN concluido = false THEN 100 ELSE 0 END
        WHERE id = $1 AND materia_id = $2
          AND EXISTS (SELECT 1 FROM materias WHERE id = $2 AND user_id = $3)
        RETURNING *`,

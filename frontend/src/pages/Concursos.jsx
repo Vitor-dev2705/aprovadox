@@ -486,7 +486,7 @@ export default function Concursos() {
                             {conteudos.length} conteúdo{conteudos.length === 1 ? '' : 's'} identificado{conteudos.length === 1 ? '' : 's'}
                           </span>
                           <span className="text-[11px] text-slate-600 block truncate">
-                            {conteudos.slice(0, 2).join(' · ')}
+                            {conteudos.slice(0, 2).map(c => c.titulo || c.nome || c).join(' · ')}
                             {conteudos.length > 2 ? ' ...' : ''}
                           </span>
                         </div>

@@ -51,6 +51,15 @@ module.exports = {
         ALTER TABLE materias ADD COLUMN IF NOT EXISTS prioridade VARCHAR(10) DEFAULT 'media';
         ALTER TABLE materias ADD COLUMN IF NOT EXISTS dominio DECIMAL(5,2) DEFAULT 0;
         ALTER TABLE materias ADD COLUMN IF NOT EXISTS horas_estimadas DECIMAL(7,2) DEFAULT 0;
+        ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'nao_iniciado';
+        ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS dificuldade VARCHAR(20) DEFAULT 'media';
+        ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS horas_estimadas DECIMAL(7,2) DEFAULT 0;
+        ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS progresso DECIMAL(5,2) DEFAULT 0;
+        ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS ultima_revisao DATE;
+        ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS proxima_revisao DATE;
+        ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'nao_iniciado';
+        ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS dificuldade VARCHAR(20) DEFAULT 'media';
+        ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS progresso DECIMAL(5,2) DEFAULT 0;
         CREATE TABLE IF NOT EXISTS resultados_questoes (
           id SERIAL PRIMARY KEY,
           user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

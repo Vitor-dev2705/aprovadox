@@ -55,6 +55,15 @@ function ConteudoItem({ conteudo, onDelete, onEdit }) {
         <p className="text-sm font-semibold text-white truncate">{conteudo.titulo}</p>
         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: info.color }}>{info.label}</span>
         {conteudo.descricao && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{conteudo.descricao}</p>}
+        {Array.isArray(conteudo.assuntos) && conteudo.assuntos.length > 0 && (
+          <div className="mt-2 pl-3 border-l border-brand-500/20 space-y-1">
+            {conteudo.assuntos.map(assunto => (
+              <p key={assunto.id || assunto.nome} className="text-xs text-slate-400">
+                {assunto.nome}
+              </p>
+            ))}
+          </div>
+        )}
         {conteudo.url && (
           <a href={conteudo.url} target="_blank" rel="noreferrer"
             onClick={(e) => e.stopPropagation()}

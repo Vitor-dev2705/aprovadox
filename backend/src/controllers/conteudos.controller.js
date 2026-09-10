@@ -8,7 +8,8 @@ exports.getByMateria = async (req, res) => {
     const result = await pool.query(
       `SELECT c.*,
         (SELECT json_agg(json_build_object(
-            'id', a.id, 'nome', a.nome, 'concluido', a.concluido, 'ordem', a.ordem
+            'id', a.id, 'nome', a.nome, 'concluido', a.concluido, 'status', a.status,
+            'progresso', a.progresso, 'ordem', a.ordem
           ) ORDER BY a.ordem)
          FROM assuntos a WHERE a.conteudo_id = c.id) as assuntos
        FROM conteudos c
@@ -70,7 +71,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, tipo, url, descricao, visualizado } = req.body;
+    const { titulo, tipo, url, descricao, visualizado, status, progresso } = req.body;
     const tipoFinal = tipo && TIPOS_VALIDOS.includes(tipo) ? tipo : null;
 
     const result = await pool.query(
@@ -79,10 +80,12 @@ exports.update = async (req, res) => {
          tipo        = COALESCE($2, tipo),
          url         = COALESCE($3, url),
          descricao   = COALESCE($4, descricao),
-         visualizado = COALESCE($5, visualizado)
-       WHERE id = $6 AND user_id = $7
+         visualizado = COALESCE($5, visualizado),
+         status      = COALESCE($6, status),
+         progresso   = COALESCE($7, progresso)
+       WHERE id = $8 AND user_id = $9
        RETURNING *`,
-      [titulo, tipoFinal, url, descricao, visualizado, id, req.userId]
+      [titulo, tipoFinal, url, descricao, visualizado, status, progresso, id, req.userId]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Conteúdo não encontrado' });
     res.json(result.rows[0]);
@@ -95,7 +98,11 @@ exports.toggle = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      'UPDATE conteudos SET visualizado = NOT visualizado WHERE id = $1 AND user_id = $2 RETURNING *',
+      `UPDATE conteudos
+       SET visualizado = NOT visualizado,
+           status = CASE WHEN visualizado = false THEN 'concluido' ELSE 'estudando' END,
+           progresso = CASE WHEN visualizado = false THEN 100 ELSE 0 END
+       WHERE id = $1 AND user_id = $2 RETURNING *`,
       [id, req.userId]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Conteúdo não encontrado' });

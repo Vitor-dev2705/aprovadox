@@ -6,7 +6,7 @@
  *  - Texto colado pelo usuário
  *  - Filtro por cargo
  *
- * Estratégia: heurística de detecção de seções típicas de editais brasileiros:
+ * Estratégia: preserva a hierarquia matéria -> conteúdo -> subconteúdo:
  *  - "CONHECIMENTOS BÁSICOS"
  *  - "CONHECIMENTOS ESPECÍFICOS"
  *  - "CONTEÚDO PROGRAMÁTICO"
@@ -160,8 +160,12 @@ function extractStructuredMaterias(text) {
   const materias = [];
   let atual = null;
   const ignoredHeaders = /^(conteúdo programático|conhecimentos básicos|conhecimentos específicos|conhecimentos gerais|matérias|disciplinas)$/i;
+  const lines = text
+    .replace(/\r/g, '')
+    .replace(/([^\n])\s+(?=\d{1,2}\s*[-.)]\s+)/g, '$1\n')
+    .split('\n');
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const rawLine of lines) {
     const line = rawLine.replace(/\s+/g, ' ').trim();
     if (!line) continue;
 
@@ -171,9 +175,9 @@ function extractStructuredMaterias(text) {
       if (nome.length >= 3) {
         atual = { nome, conteudos: [] };
         materias.push(atual);
-        const inlineContent = materiaMatch[2].match(/^\s*\d+(?:\.\d+)*[\s.)-]+\s*(.+)$/);
-        if (inlineContent && inlineContent[1].trim().length >= 2) {
-          atual.conteudos.push(inlineContent[1].trim());
+        const inlineContent = materiaMatch[2].trim();
+        if (inlineContent) {
+          addStructuredContent(atual, inlineContent);
         }
       }
       continue;
@@ -181,8 +185,7 @@ function extractStructuredMaterias(text) {
 
     const conteudoMatch = line.match(/^\s*\d+(?:\.\d+)*[\s.)-]+\s*(.+)$/);
     if (conteudoMatch && atual) {
-      const conteudo = conteudoMatch[1].trim();
-      if (conteudo.length >= 2) atual.conteudos.push(conteudo);
+      addStructuredContent(atual, conteudoMatch[1].trim());
     }
   }
 
@@ -190,6 +193,43 @@ function extractStructuredMaterias(text) {
     .filter((m, index, list) => list.findIndex(item => item.nome.toLowerCase() === m.nome.toLowerCase()) === index)
     .slice(0, 50);
 }
+
+function addStructuredContent(materia, rawContent) {
+  const value = rawContent.replace(/[.;]+$/, '').trim();
+  if (!value) return;
+
+  const separator = value.search(/\s[-–—:]\s/);
+  const titulo = separator >= 0 ? value.slice(0, separator).trim() : value;
+  const details = separator >= 0 ? value.slice(separator + 3).trim() : '';
+  if (titulo.length < 2) return;
+
+  const conteudo = { titulo, assuntos: [] };
+  if (details) conteudo.assuntos = splitSubtopics(details);
+  materia.conteudos.push(conteudo);
+}
+
+function splitSubtopics(details) {
+  const normalized = details.replace(/\s+/g, ' ').replace(/[.;]+$/, '').trim();
+  if (!normalized) return [];
+
+  const parts = normalized
+    .split(/;|,/)
+    .flatMap(item => item.split(/\s+e\s+/i))
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) return [];
+
+  return parts.map(part => {
+    let value = part.replace(/^e\s+/i, '').trim();
+    value = value.replace(/^o\s+conceito\s+do\s+/i, '');
+    value = value.replace(/^c(?:á|a)lculo\s+(?:do|da|dos|das)\s+/i, '');
+    value = value.replace(/^(?:o|a|os|as|do|da|dos|das)\s+/i, '');
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  });
+}
+
+exports.extractMaterias = extractMaterias;
 
 /**
  * POST /api/extracao/edital
