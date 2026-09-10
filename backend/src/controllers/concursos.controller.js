@@ -25,8 +25,7 @@ exports.getAll = async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar concursos' });
-  }
+   }
 };
 
 exports.getById = async (req, res) => {
@@ -66,6 +65,7 @@ exports.create = async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error('Erro ao criar concurso:', err);
     res.status(500).json({ error: 'Erro ao criar concurso' });
   }
 };

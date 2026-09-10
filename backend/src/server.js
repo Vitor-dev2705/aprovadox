@@ -17,6 +17,7 @@ const planejamentoRoutes = require('./routes/planejamento.routes');
 const notificacoesRoutes = require('./routes/notificacoes.routes');
 const conteudosRoutes = require('./routes/conteudos.routes');
 const extracaoRoutes = require('./routes/extracao.routes');
+const pool = require('./config/database');
 
 const app = express();
 
@@ -42,6 +43,16 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Mantém deployments existentes compatíveis com as colunas do planejador.
+app.use(async (req, res, next) => {
+  try {
+    await pool.ensurePlannerSchema();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Healthcheck — diagnóstico rápido sem auth
 app.get('/api/health', async (req, res) => {

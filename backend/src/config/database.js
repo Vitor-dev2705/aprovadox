@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 // Pool otimizado para serverless (Vercel + Neon)
 // Em serverless cada invocation é um novo container, então max:1 é o correto
 let pool;
+let plannerSchemaPromise;
 
 function getPool() {
   if (!pool) {
@@ -31,4 +32,48 @@ module.exports = {
   query: (...args) => getPool().query(...args),
   connect: () => getPool().connect(),
   end: () => pool && pool.end(),
+  ensurePlannerSchema: () => {
+    if (!plannerSchemaPromise) {
+      plannerSchemaPromise = getPool().query(`
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS orgao VARCHAR(255);
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS data_prova_estimada DATE;
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS data_prova_oficial DATE;
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS status VARCHAR(40) NOT NULL DEFAULT 'estudando';
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS numero_questoes INTEGER;
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS peso_prova DECIMAL(8,2);
+        ALTER TABLE concursos ADD COLUMN IF NOT EXISTS observacoes TEXT;
+        ALTER TABLE materias ADD COLUMN IF NOT EXISTS prioridade VARCHAR(10) DEFAULT 'media';
+        ALTER TABLE materias ADD COLUMN IF NOT EXISTS dominio DECIMAL(5,2) DEFAULT 0;
+        ALTER TABLE materias ADD COLUMN IF NOT EXISTS horas_estimadas DECIMAL(7,2) DEFAULT 0;
+        CREATE TABLE IF NOT EXISTS resultados_questoes (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          concurso_id INTEGER REFERENCES concursos(id) ON DELETE CASCADE,
+          materia_id INTEGER REFERENCES materias(id) ON DELETE CASCADE,
+          assunto VARCHAR(255),
+          banca VARCHAR(255),
+          data DATE NOT NULL DEFAULT CURRENT_DATE,
+          quantidade INTEGER NOT NULL,
+          acertos INTEGER NOT NULL DEFAULT 0,
+          erros INTEGER GENERATED ALWAYS AS (quantidade - acertos) STORED,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS simulados (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          concurso_id INTEGER REFERENCES concursos(id) ON DELETE CASCADE,
+          data DATE NOT NULL DEFAULT CURRENT_DATE,
+          quantidade_questoes INTEGER NOT NULL,
+          acertos INTEGER NOT NULL DEFAULT 0,
+          tempo_minutos INTEGER,
+          nota_estimada DECIMAL(7,2),
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `).catch((err) => {
+        plannerSchemaPromise = null;
+        throw err;
+      });
+    }
+    return plannerSchemaPromise;
+  },
 };
