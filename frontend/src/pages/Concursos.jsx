@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   FiTarget, FiPlus, FiCalendar, FiEdit2, FiTrash2, FiBook,
-  FiDownload, FiZap, FiCheck, FiX, FiExternalLink, FiAlertCircle
+  FiDownload, FiZap, FiCheck, FiX, FiExternalLink, FiAlertCircle, FiFileText
 } from 'react-icons/fi'
 import { concursoService } from '../services/concurso.service'
 import { extracaoService } from '../services/extracao.service'
@@ -30,9 +30,9 @@ function DaysRemaining({ date }) {
   if (!date) return <Badge variant="default">Sem data</Badge>
   const days = Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24))
   if (days < 0) return <Badge variant="danger">Prova encerrada</Badge>
-  if (days <= 30) return <Badge variant="danger">⚠️ {days} dias</Badge>
-  if (days <= 90) return <Badge variant="warning">🕐 {days} dias</Badge>
-  return <Badge variant="success">📅 {days} dias</Badge>
+  if (days <= 30) return <Badge variant="danger">{days} dias</Badge>
+  if (days <= 90) return <Badge variant="warning">{days} dias</Badge>
+  return <Badge variant="success">{days} dias</Badge>
 }
 
 export default function Concursos() {
@@ -143,7 +143,7 @@ export default function Concursos() {
       setExtractedMaterias(data.materias)
       // Marca todas selecionadas por padrão
       const initial = {}
-      data.materias.forEach(m => { initial[m] = true })
+      data.materias.forEach(m => { initial[m.nome || m] = true })
       setSelectedMaterias(initial)
       setImportStep('review')
       toast.success(`${data.materias.length} matéria(s) detectada(s)!`)
@@ -159,7 +159,7 @@ export default function Concursos() {
   }
 
   const handleImportar = async () => {
-    const aImportar = extractedMaterias.filter(m => selectedMaterias[m])
+    const aImportar = extractedMaterias.filter(m => selectedMaterias[m.nome || m])
     if (!aImportar.length) {
       toast.error('Selecione ao menos uma matéria')
       return
@@ -168,16 +168,18 @@ export default function Concursos() {
     try {
       let count = 0
       for (let i = 0; i < aImportar.length; i++) {
-        const nome = aImportar[i]
+        const materia = aImportar[i]
+        const nome = materia.nome || materia
         const cor = CORES[i % CORES.length]
         await materiaService.create({
           nome,
           cor,
           concurso_id: importConcurso.id,
+          conteudos: materia.conteudos || [],
         })
         count++
       }
-      toast.success(`✅ ${count} matéria(s) importada(s) com sucesso!`)
+      toast.success(`${count} matéria(s) importada(s) com sucesso!`)
       // Atualizar lista
       const r = await concursoService.getAll()
       setConcursos(r.data)
@@ -196,7 +198,7 @@ export default function Concursos() {
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <PageHeader
-        emoji="🎯"
+        icon={FiTarget}
         title="Concursos"
         subtitle="Gerencie seus concursos, prazos e edital"
         badge="Carreira"
@@ -332,7 +334,7 @@ export default function Concursos() {
           {form.edital_url && (
             <div className="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20">
               <p className="text-xs text-brand-300">
-                💡 <span className="font-semibold">Dica:</span> Após salvar, clique em <span className="font-bold">"Importar matérias do edital"</span> no card para que o sistema extraia automaticamente as matérias para o cargo.
+                <span className="font-semibold">Dica:</span> Após salvar, clique em <span className="font-bold">"Importar matérias do edital"</span> no card para que o sistema extraia automaticamente as matérias para o cargo.
               </p>
             </div>
           )}
@@ -358,13 +360,13 @@ export default function Concursos() {
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
                   importSource === 'url' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
                 }`}>
-                🔗 Por URL
+                <FiExternalLink size={13} /> Por URL
               </button>
               <button onClick={() => setImportSource('texto')}
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
                   importSource === 'texto' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
                 }`}>
-                📋 Colar texto
+                <FiFileText size={13} /> Colar texto
               </button>
             </div>
 
@@ -437,7 +439,7 @@ export default function Concursos() {
               <div className="flex gap-2">
                 <button onClick={() => {
                   const all = {}
-                  extractedMaterias.forEach(m => all[m] = true)
+                  extractedMaterias.forEach(m => { all[m.nome || m] = true })
                   setSelectedMaterias(all)
                 }}
                   className="text-xs text-brand-400 hover:text-brand-300">
@@ -453,15 +455,17 @@ export default function Concursos() {
 
             <div className="max-h-80 overflow-y-auto space-y-2 -mr-2 pr-2">
               {extractedMaterias.map((m, i) => {
-                const checked = !!selectedMaterias[m]
+                const nome = m.nome || m
+                const conteudos = m.conteudos || []
+                const checked = !!selectedMaterias[nome]
                 const cor = CORES[i % CORES.length]
                 return (
                   <motion.button
-                    key={m}
+                    key={nome}
                     type="button"
                     initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    onClick={() => toggleMateria(m)}
+                    onClick={() => toggleMateria(nome)}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
                       checked
                         ? 'bg-brand-500/10 border-brand-500/40'
@@ -474,14 +478,27 @@ export default function Concursos() {
                       {checked && <FiCheck size={12} className="text-white" />}
                     </div>
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cor }} />
-                    <span className="text-sm font-medium text-white flex-1">{m}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-white block">{nome}</span>
+                      {conteudos.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          <span className="text-xs text-slate-500 block">
+                            {conteudos.length} conteúdo{conteudos.length === 1 ? '' : 's'} identificado{conteudos.length === 1 ? '' : 's'}
+                          </span>
+                          <span className="text-[11px] text-slate-600 block truncate">
+                            {conteudos.slice(0, 2).join(' · ')}
+                            {conteudos.length > 2 ? ' ...' : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </motion.button>
                 )
               })}
             </div>
 
             <div className="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs text-brand-200">
-              💡 As matérias selecionadas serão criadas e vinculadas a este concurso. Você poderá adicionar conteúdos específicos depois.
+              As matérias selecionadas serão criadas e vinculadas a este concurso. Você poderá adicionar conteúdos específicos depois.
             </div>
 
             <div className="flex gap-3 pt-2">

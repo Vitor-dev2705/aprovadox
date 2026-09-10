@@ -17,7 +17,7 @@ export const useAuthStore = create(
           const { data } = await api.post('/auth/login', { email, password })
           set({ user: data.user, token: data.token, isAuthenticated: true })
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-          toast.success(`Bem-vindo de volta, ${data.user.name.split(' ')[0]}! 🎯`)
+          toast.success(`Bem-vindo de volta, ${data.user.name.split(' ')[0]}!`)
           return true
         } catch (err) {
           toast.error(err.response?.data?.error || 'Erro ao fazer login')
@@ -33,7 +33,7 @@ export const useAuthStore = create(
           const { data } = await api.post('/auth/register', { name, email, password, data_nascimento })
           set({ user: data.user, token: data.token, isAuthenticated: true })
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-          toast.success('Conta criada! Sua jornada começa agora 🚀')
+          toast.success('Conta criada! Sua jornada começa agora')
           return true
         } catch (err) {
           toast.error(err.response?.data?.error || 'Erro ao criar conta')
@@ -46,7 +46,7 @@ export const useAuthStore = create(
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false })
         delete api.defaults.headers.common['Authorization']
-        toast.success('Até logo! Continue estudando 📚')
+        toast.success('Até logo! Continue estudando')
       },
 
       updateUser: (userData) => {

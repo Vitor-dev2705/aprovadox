@@ -3,11 +3,13 @@ const pool = require('../config/database');
 exports.getAll = async (req, res) => {
   try {
     const { concurso_id } = req.query;
-    let query = `SELECT m.*,
+    let query = `SELECT m.*, c.nome as concurso_nome, c.orgao as concurso_orgao,
       COALESCE((SELECT SUM(s.duracao_minutos) FROM sessoes_estudo s WHERE s.materia_id = m.id), 0) as horas_estudadas,
       (SELECT COUNT(*) FROM assuntos WHERE materia_id = m.id) as total_assuntos,
-      (SELECT COUNT(*) FROM assuntos WHERE materia_id = m.id AND concluido = true) as assuntos_concluidos
-      FROM materias m WHERE m.user_id = $1`;
+      (SELECT COUNT(*) FROM assuntos WHERE materia_id = m.id AND concluido = true) as assuntos_concluidos,
+      (SELECT COUNT(*) FROM conteudos WHERE materia_id = m.id) as total_conteudos
+      FROM materias m LEFT JOIN concursos c ON c.id = m.concurso_id AND c.user_id = m.user_id
+      WHERE m.user_id = $1`;
     const params = [req.userId];
 
     if (concurso_id) { query += ' AND m.concurso_id = $2'; params.push(concurso_id); }
@@ -84,10 +86,13 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { nome, cor, meta_semanal_horas, peso } = req.body;
+    const { nome, cor, meta_semanal_horas, peso, concurso_id } = req.body;
     const result = await pool.query(
-      'UPDATE materias SET nome=COALESCE($1,nome), cor=COALESCE($2,cor), meta_semanal_horas=COALESCE($3,meta_semanal_horas), peso=COALESCE($4,peso) WHERE id=$5 AND user_id=$6 RETURNING *',
-      [nome, cor, meta_semanal_horas, peso, req.params.id, req.userId]
+      `UPDATE materias SET nome=COALESCE($1,nome), cor=COALESCE($2,cor),
+       meta_semanal_horas=COALESCE($3,meta_semanal_horas), peso=COALESCE($4,peso),
+       concurso_id=$5
+       WHERE id=$6 AND user_id=$7 RETURNING *`,
+      [nome, cor, meta_semanal_horas, peso, concurso_id || null, req.params.id, req.userId]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Matéria não encontrada' });
     res.json(result.rows[0]);

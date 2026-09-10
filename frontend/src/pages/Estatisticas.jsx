@@ -112,7 +112,7 @@ export default function Estatisticas() {
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <PageHeader
-        emoji="📊"
+        icon={FiBarChart2}
         title="Estatísticas"
         subtitle="Análise completa do seu desempenho"
         badge={totalSessoes > 0 ? `${totalSessoes} sessões` : 'Comece a estudar'}

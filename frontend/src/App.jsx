@@ -46,9 +46,9 @@ export default function App() {
   // Mostra o cronômetro na aba do navegador
   useEffect(() => {
     if (isRunning) {
-      document.title = `⏱️ ${getFormattedTime()} | AprovadoX`
+      document.title = `${getFormattedTime()} | AprovadoX`
     } else if (isPaused) {
-      document.title = `⏸️ ${getFormattedTime()} | AprovadoX`
+      document.title = `${getFormattedTime()} | AprovadoX`
     } else {
       document.title = 'AprovadoX'
     }

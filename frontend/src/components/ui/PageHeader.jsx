@@ -4,13 +4,13 @@ import { motion } from 'framer-motion'
  * PageHeader padrão para todas as páginas internas.
  *
  * Props:
- *  - emoji: string com emoji opcional (ex: '📚')
+ *  - icon: componente de ícone opcional
  *  - title: título principal (string ou elemento)
  *  - subtitle: descrição curta abaixo
  *  - actions: elemento(s) à direita (botões, badges)
  *  - badge: pequeno badge de status no topo (string)
  */
-export default function PageHeader({ emoji, title, subtitle, actions, badge }) {
+export default function PageHeader({ icon: Icon, title, subtitle, actions, badge }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -12 }}
@@ -26,7 +26,7 @@ export default function PageHeader({ emoji, title, subtitle, actions, badge }) {
             </div>
           )}
           <div className="flex items-center gap-3">
-            {emoji && <span className="text-3xl sm:text-4xl">{emoji}</span>}
+            {Icon && <span className="w-10 h-10 rounded-xl bg-brand-500/15 border border-brand-500/25 text-brand-300 flex items-center justify-center"><Icon size={22} /></span>}
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               {title}
             </h1>

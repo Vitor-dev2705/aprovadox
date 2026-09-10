@@ -427,7 +427,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <PageHeader
-        emoji="🎯"
+        icon={FiTarget}
         title="Dashboard"
         subtitle={`"${d.frase_motivacional}"`}
         badge="Visao geral"
@@ -443,7 +443,7 @@ export default function Dashboard() {
         <StatCard delay={0.0} icon={FiClock}      label="Hoje"      value={hojeF}   sub="tempo"  color="brand"   onClick={() => navigate('/estatisticas')} />
         <StatCard delay={0.1} icon={FiTrendingUp} label="Semana"    value={semanaF}  sub="tempo"  color="success" onClick={() => navigate('/estatisticas')} />
         <StatCard delay={0.2} icon={FiAward}      label="Mes"       value={mesF}     sub="tempo"  color="purple"  onClick={() => navigate('/estatisticas')} />
-        <StatCard delay={0.3} icon={FiZap}        label="Sequencia" value={`${d.streak || 0} 🔥`} sub="dias" color="orange" onClick={() => navigate('/gamificacao')} />
+        <StatCard delay={0.3} icon={FiZap}        label="Sequência" value={`${d.streak || 0}`} sub="dias" color="orange" onClick={() => navigate('/gamificacao')} />
       </div>
 
       {/* Meta diária */}

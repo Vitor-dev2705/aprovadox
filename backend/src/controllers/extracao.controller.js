@@ -100,6 +100,9 @@ function findCargoSection(text, cargo) {
  * Extrai matérias e tópicos prováveis usando heurísticas.
  */
 function extractMaterias(text) {
+  const structured = extractStructuredMaterias(text);
+  if (structured.length) return structured;
+
   const found = new Map(); // nome -> array de tópicos
 
   // 1) Buscar matérias comuns conhecidas
@@ -141,7 +144,51 @@ function extractMaterias(text) {
     .filter(n => n.length > 3 && n.length < 80)
     .slice(0, 30);
 
-  return result;
+  return result.map(nome => ({ nome, conteudos: [] }));
+}
+
+/**
+ * Editais frequentemente usam o formato:
+ *
+ * LÍNGUA PORTUGUESA:
+ * 1. Interpretação de textos.
+ * 2. Ortografia.
+ *
+ * O título antes de ":" é a matéria e cada linha numerada é um conteúdo.
+ */
+function extractStructuredMaterias(text) {
+  const materias = [];
+  let atual = null;
+  const ignoredHeaders = /^(conteúdo programático|conhecimentos básicos|conhecimentos específicos|conhecimentos gerais|matérias|disciplinas)$/i;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/\s+/g, ' ').trim();
+    if (!line) continue;
+
+    const materiaMatch = line.match(/^(.{3,100}):\s*(.*)$/);
+    if (materiaMatch && !ignoredHeaders.test(materiaMatch[1].trim())) {
+      const nome = materiaMatch[1].trim().replace(/^\d+(?:\.\d+)*[\s.)-]+/, '');
+      if (nome.length >= 3) {
+        atual = { nome, conteudos: [] };
+        materias.push(atual);
+        const inlineContent = materiaMatch[2].match(/^\s*\d+(?:\.\d+)*[\s.)-]+\s*(.+)$/);
+        if (inlineContent && inlineContent[1].trim().length >= 2) {
+          atual.conteudos.push(inlineContent[1].trim());
+        }
+      }
+      continue;
+    }
+
+    const conteudoMatch = line.match(/^\s*\d+(?:\.\d+)*[\s.)-]+\s*(.+)$/);
+    if (conteudoMatch && atual) {
+      const conteudo = conteudoMatch[1].trim();
+      if (conteudo.length >= 2) atual.conteudos.push(conteudo);
+    }
+  }
+
+  return materias
+    .filter((m, index, list) => list.findIndex(item => item.nome.toLowerCase() === m.nome.toLowerCase()) === index)
+    .slice(0, 50);
 }
 
 /**

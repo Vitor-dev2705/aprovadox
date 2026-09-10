@@ -5,6 +5,7 @@ import {
   FiVideo, FiFileText, FiGlobe, FiBook, FiEdit, FiLayers, FiExternalLink, FiList
 } from 'react-icons/fi'
 import { materiaService } from '../services/materia.service'
+import { concursoService } from '../services/concurso.service'
 import { conteudoService } from '../services/conteudo.service'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -138,6 +139,11 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo }) {
             </div>
 
             <div>
+              {materia.concurso_nome && (
+                <p className="text-[10px] uppercase tracking-wider text-brand-300 font-bold mb-1">
+                  {materia.concurso_nome}
+                </p>
+              )}
               <h3 className="font-bold text-white text-base">
                 {materia.nome}
               </h3>
@@ -196,7 +202,7 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo }) {
               <div className="pt-4 mt-4 border-t border-white/5">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    📚 Conteúdos
+                    <FiBookOpen size={14} /> Conteúdos
                   </p>
                 </div>
 
@@ -245,11 +251,12 @@ function MateriaCard({ materia, onEdit, onDelete, onAddConteudo }) {
 
 export default function Materias() {
   const [materias, setMaterias] = useState([])
+  const [concursos, setConcursos] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTab, setModalTab] = useState('basico')
   const [editItem, setEditItem] = useState(null)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState({ ...EMPTY_FORM, concurso_id: '' })
   const [saving, setSaving] = useState(false)
 
   // Conteúdo modal
@@ -261,18 +268,24 @@ export default function Materias() {
   const [savingConteudo, setSavingConteudo] = useState(false)
 
   useEffect(() => {
-    materiaService.getAll().then(r => setMaterias(r.data)).catch(() => setMaterias([])).finally(() => setLoading(false))
+    Promise.all([materiaService.getAll(), concursoService.getAll()])
+      .then(([materiasResponse, concursosResponse]) => {
+        setMaterias(materiasResponse.data)
+        setConcursos(concursosResponse.data)
+      })
+      .catch(() => { setMaterias([]); setConcursos([]) })
+      .finally(() => setLoading(false))
   }, [])
 
   const openAdd = () => {
     setEditItem(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM, concurso_id: concursos[0]?.id || '' })
     setModalTab('basico')
     setModalOpen(true)
   }
   const openEdit = (m) => {
     setEditItem(m)
-    setForm({ nome: m.nome, cor: m.cor, conteudos_texto: '' })
+    setForm({ nome: m.nome, cor: m.cor, conteudos_texto: '', concurso_id: m.concurso_id || '' })
     setModalTab('basico')
     setModalOpen(true)
   }
@@ -282,11 +295,11 @@ export default function Materias() {
     const conteudos = form.conteudos_texto.split('\n').map(s => s.trim()).filter(Boolean)
     try {
       if (editItem) {
-        const r = await materiaService.update(editItem.id, { nome: form.nome, cor: form.cor })
+        const r = await materiaService.update(editItem.id, { nome: form.nome, cor: form.cor, concurso_id: form.concurso_id || null })
         setMaterias(ms => ms.map(m => m.id === editItem.id ? { ...m, ...r.data } : m))
         toast.success('Matéria atualizada!')
       } else {
-        const r = await materiaService.create({ nome: form.nome, cor: form.cor, conteudos })
+        const r = await materiaService.create({ nome: form.nome, cor: form.cor, concurso_id: form.concurso_id || null, conteudos })
         setMaterias(ms => [...ms, r.data])
         toast.success(`Matéria criada${conteudos.length ? ` + ${conteudos.length} conteúdo(s)` : ''}!`)
       }
@@ -331,12 +344,25 @@ export default function Materias() {
 
   if (loading) return <Loader />
 
+  const grupos = materias.reduce((acc, materia) => {
+    const key = materia.concurso_id ? String(materia.concurso_id) : 'sem-concurso'
+    if (!acc[key]) {
+      acc[key] = {
+        id: key,
+        nome: materia.concurso_nome || 'Matérias sem concurso',
+        materias: [],
+      }
+    }
+    acc[key].materias.push(materia)
+    return acc
+  }, {})
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <PageHeader
-        emoji="📚"
+        icon={FiBookOpen}
         title="Matérias"
-        subtitle={`${materias.length} ${materias.length === 1 ? 'matéria cadastrada' : 'matérias cadastradas'}`}
+        subtitle={`${materias.length} ${materias.length === 1 ? 'matéria cadastrada' : 'matérias cadastradas'} organizadas por concurso`}
         badge="Gestão de estudos"
         actions={<Button onClick={openAdd} icon={<FiPlus size={16} />}>Nova Matéria</Button>}
       />
@@ -346,17 +372,27 @@ export default function Materias() {
           description="Crie suas matérias e adicione conteúdos para organizar seus estudos."
           action={openAdd} actionLabel="Criar Matéria" />
       ) : (
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {materias.map((m, i) => (
-            <motion.div key={m.id}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <MateriaCard
-                materia={m}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                onAddConteudo={openConteudoModal}
-              />
-            </motion.div>
+        <div className="space-y-8">
+          {Object.values(grupos).map((grupo) => (
+            <section key={grupo.id} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-brand-500/15 border border-brand-500/25 text-brand-300 flex items-center justify-center">
+                  <FiBookOpen size={17} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">{grupo.nome}</h2>
+                  <p className="text-xs text-slate-500">{grupo.materias.length} matérias e seus conteúdos</p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {grupo.materias.map((materia, index) => (
+                  <motion.div key={materia.id}
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                    <MateriaCard materia={materia} onEdit={openEdit} onDelete={handleDelete} onAddConteudo={openConteudoModal} />
+                  </motion.div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
@@ -371,13 +407,13 @@ export default function Materias() {
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
                   modalTab === 'basico' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
                 }`}>
-                ⓘ Informações
+                <FiBookOpen size={13} /> Informações
               </button>
               <button type="button" onClick={() => setModalTab('conteudos')}
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
                   modalTab === 'conteudos' ? 'bg-brand-500 text-white' : 'text-slate-400 hover:text-white'
                 }`}>
-                📚 Conteúdos
+                <FiList size={13} /> Conteúdos
               </button>
             </div>
           )}
@@ -386,6 +422,21 @@ export default function Materias() {
             <div className="space-y-4">
               <Input label="Nome da Matéria" placeholder="Ex: Português"
                 value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required />
+
+              <div>
+                <label className="text-sm font-medium text-slate-300 block mb-1.5">Concurso</label>
+                <select
+                  className="input-field text-sm"
+                  value={form.concurso_id}
+                  onChange={e => setForm({ ...form, concurso_id: e.target.value })}
+                >
+                  <option value="">Sem concurso</option>
+                  {concursos.map(concurso => (
+                    <option key={concurso.id} value={concurso.id}>{concurso.nome}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">A matéria e seus conteúdos aparecerão agrupados neste concurso.</p>
+              </div>
 
               <div>
                 <label className="text-sm font-medium text-slate-300 block mb-2">Cor</label>
@@ -415,7 +466,7 @@ export default function Materias() {
                   autoFocus
                 />
                 <p className="text-xs text-slate-500 mt-2">
-                  💡 <span className="text-slate-300 font-medium">Exemplo:</span> Para Português, adicione "Morfologia", "Sintaxe", "Crase".
+                  <span className="text-slate-300 font-medium">Exemplo:</span> Para Português, adicione "Morfologia", "Sintaxe", "Crase".
                   As revisões serão agendadas com base nestes conteúdos.
                 </p>
               </div>
