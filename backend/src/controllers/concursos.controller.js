@@ -45,14 +45,30 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  const requestId = `concurso-create-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   try {
     const {
       nome, orgao, banca, cargo, data_prova, data_prova_estimada,
       data_prova_oficial, status, numero_questoes, peso_prova, observacoes, edital_url
     } = req.body;
     if (!nome || !nome.trim()) {
+      console.warn(`[${requestId}] Nome do concurso ausente`);
       return res.status(400).json({ error: 'Nome do concurso é obrigatório' });
     }
+    console.log(`[${requestId}] Criando concurso`, {
+      userId: req.userId,
+      nome: nome.trim(),
+      orgao: orgao || null,
+      banca: banca || null,
+      cargo: cargo || null,
+      dataProvaEstimada: data_prova_estimada || data_prova || null,
+      dataProvaOficial: data_prova_oficial || null,
+      status: status || 'estudando',
+      numeroQuestoes: numero_questoes || null,
+      pesoProva: peso_prova || null,
+      temObservacoes: Boolean(observacoes),
+      temEditalUrl: Boolean(edital_url),
+    });
     const result = await pool.query(
       `INSERT INTO concursos
         (user_id, nome, orgao, banca, cargo, data_prova, data_prova_estimada,
@@ -63,10 +79,20 @@ exports.create = async (req, res) => {
         data_prova_estimada || data_prova || null, status, numero_questoes || null, peso_prova || null,
         observacoes || null, edital_url || null]
     );
+    console.log(`[${requestId}] Concurso criado`, { id: result.rows[0]?.id });
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error('Erro ao criar concurso:', err);
-    res.status(500).json({ error: 'Erro ao criar concurso' });
+    console.error(`[${requestId}] Erro ao criar concurso`, {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+      hint: err.hint,
+      table: err.table,
+      column: err.column,
+      constraint: err.constraint,
+      userId: req.userId,
+    });
+    res.status(500).json({ error: 'Erro ao criar concurso', requestId });
   }
 };
 

@@ -21,7 +21,12 @@ function getPool() {
     });
 
     pool.on('error', (err) => {
-      console.error('Postgres pool error:', err);
+      console.error('[DB] Postgres pool error', {
+        message: err.message,
+        code: err.code,
+        detail: err.detail,
+        hint: err.hint,
+      });
     });
   }
   return pool;
@@ -34,6 +39,7 @@ module.exports = {
   end: () => pool && pool.end(),
   ensurePlannerSchema: () => {
     if (!plannerSchemaPromise) {
+      console.log('[DB] Verificando schema do planejador...');
       plannerSchemaPromise = getPool().query(`
         ALTER TABLE concursos ADD COLUMN IF NOT EXISTS orgao VARCHAR(255);
         ALTER TABLE concursos ADD COLUMN IF NOT EXISTS data_prova_estimada DATE;
@@ -69,8 +75,20 @@ module.exports = {
           nota_estimada DECIMAL(7,2),
           created_at TIMESTAMP DEFAULT NOW()
         );
-      `).catch((err) => {
+      `).then((result) => {
+        console.log('[DB] Schema do planejador verificado com sucesso');
+        return result;
+      }).catch((err) => {
         plannerSchemaPromise = null;
+        console.error('[DB] Falha ao verificar schema do planejador', {
+          message: err.message,
+          code: err.code,
+          detail: err.detail,
+          hint: err.hint,
+          table: err.table,
+          column: err.column,
+          constraint: err.constraint,
+        });
         throw err;
       });
     }

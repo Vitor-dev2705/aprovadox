@@ -46,10 +46,25 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Mantém deployments existentes compatíveis com as colunas do planejador.
 app.use(async (req, res, next) => {
+  const startedAt = Date.now();
   try {
     await pool.ensurePlannerSchema();
+    console.log('[API] Schema pronto', {
+      method: req.method,
+      path: req.path,
+      durationMs: Date.now() - startedAt,
+    });
     next();
   } catch (err) {
+    console.error('[API] Falha no middleware do schema', {
+      method: req.method,
+      path: req.path,
+      durationMs: Date.now() - startedAt,
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+      hint: err.hint,
+    });
     next(err);
   }
 });
@@ -82,7 +97,12 @@ app.use('/api/conteudos', conteudosRoutes);
 app.use('/api/extracao', extracaoRoutes);
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('[API] Erro não tratado', {
+    method: req.method,
+    path: req.path,
+    message: err.message,
+    stack: err.stack,
+  });
   res.status(err.status || 500).json({ error: err.message || 'Erro interno do servidor' });
 });
 
