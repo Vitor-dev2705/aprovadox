@@ -85,7 +85,7 @@ exports.update = async (req, res) => {
          progresso   = COALESCE($7, progresso)
        WHERE id = $8 AND user_id = $9
        RETURNING *`,
-      [titulo, tipoFinal, url, descricao, visualizado, status, progresso, id, req.userId]
+      [titulo, tipoFinal, url || null, descricao || null, visualizado, status, progresso, id, req.userId]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Conteúdo não encontrado' });
     res.json(result.rows[0]);

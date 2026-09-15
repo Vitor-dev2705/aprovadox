@@ -77,12 +77,6 @@ CREATE TABLE IF NOT EXISTS assuntos (
   ordem       INTEGER DEFAULT 0
 );
 
-ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'nao_iniciado';
-ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS dificuldade VARCHAR(20) DEFAULT 'media';
-ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS horas_estimadas DECIMAL(7,2) DEFAULT 0;
-ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS progresso DECIMAL(5,2) DEFAULT 0;
-ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS ultima_revisao DATE;
-ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS proxima_revisao DATE;
 ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'nao_iniciado';
 ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS dificuldade VARCHAR(20) DEFAULT 'media';
 ALTER TABLE assuntos ADD COLUMN IF NOT EXISTS progresso DECIMAL(5,2) DEFAULT 0;
@@ -139,6 +133,14 @@ CREATE TABLE IF NOT EXISTS conteudos (
   ordem        INTEGER DEFAULT 0,
   created_at   TIMESTAMP DEFAULT NOW()
 );
+
+-- Migrations para conteudos (APÓS CREATE TABLE)
+ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'nao_iniciado';
+ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS dificuldade VARCHAR(20) DEFAULT 'media';
+ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS horas_estimadas DECIMAL(7,2) DEFAULT 0;
+ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS progresso DECIMAL(5,2) DEFAULT 0;
+ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS ultima_revisao DATE;
+ALTER TABLE conteudos ADD COLUMN IF NOT EXISTS proxima_revisao DATE;
 
 CREATE INDEX IF NOT EXISTS idx_conteudos_materia ON conteudos(materia_id);
 CREATE INDEX IF NOT EXISTS idx_conteudos_user    ON conteudos(user_id);

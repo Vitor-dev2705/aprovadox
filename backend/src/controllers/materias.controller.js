@@ -79,7 +79,7 @@ exports.create = async (req, res) => {
         if (!titulo) continue;
         const contentResult = await client.query(
           `INSERT INTO conteudos (user_id, materia_id, titulo, tipo, ordem)
-           VALUES ($1, $2, $3, 'anotacao', $4)`,
+           VALUES ($1, $2, $3, 'anotacao', $4) RETURNING *`,
           [req.userId, materia.id, titulo, i]
         );
         const conteudoId = contentResult.rows[0].id;
